@@ -1,0 +1,14 @@
+Copyright © Microscale Labs. All rights reserved.
+
+This repository is proprietary. The canonical schema, adapter/bridge library, device catalog, and
+SDK are the intellectual property of Microscale Labs.
+
+Clients of a Microscale engagement receive a non-exclusive, perpetual licence to USE the delivered
+schema, the adapters relevant to their deployment, and their own benchmarked catalog entries within
+their own platform. Ownership of the library and catalog is retained by Microscale (licence, not
+assignment). No right to redistribute, sublicense, or resell the library is granted.
+
+The contents of `dashboard/` may, at Microscale's discretion, be released separately under an
+open-source licence; until such a release, they are covered by this notice.
+
+Not for redistribution without written permission.

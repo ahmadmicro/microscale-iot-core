@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://microscale.io/schemas/telemetry/device-descriptor-1.0.json",
+  "title": "Device Descriptor",
+  "description": "Retained payload at ms/<site>/<device>/$meta. Self-describes a device so a dashboard or consumer can discover its channels/points and format them without prior knowledge. Cleared/updated via MQTT retained + Last-Will (online:false) on disconnect.",
+  "type": "object",
+  "required": ["schema_version", "device_id", "site", "adapter", "channels"],
+  "properties": {
+    "schema_version": { "type": "string", "description": "Canonical schema version this device speaks, e.g. \"1.0\"." },
+    "device_id":      { "type": "string" },
+    "site":           { "type": "string", "description": "Site/tenant id — the top of the topic hierarchy." },
+    "area":           { "type": "string", "description": "Optional sub-location, e.g. \"plant-room\", \"DB-2\"." },
+    "model":          { "type": "string", "description": "Canonical model key, e.g. \"orno.we-516\" — links to a catalog entry." },
+    "adapter":        { "type": "string", "description": "Adapter id@version that produced this stream, e.g. \"modbus.orno-we-516@1.2\"." },
+    "source":         { "type": "string", "enum": ["grid", "generator", "solar", "battery", "unknown"], "description": "Default carbon source tag for this device's energy points." },
+    "accuracy_class": { "type": "string", "description": "Benchmarked accuracy vs a reference meter (from the catalog), e.g. \"1.0\" — measured, not vendor spec." },
+    "online":         { "type": "boolean" },
+    "channels": {
+      "type": "array",
+      "description": "A device may expose several channels (e.g. circuits on a multi-channel meter). Each lists the canonical metric keys it publishes.",
+      "items": {
+        "type": "object",
+        "required": ["id", "points"],
+        "properties": {
+          "id":     { "type": "string", "description": "Channel id, e.g. \"main\", \"circuit-3\"." },
+          "label":  { "type": "string" },
+          "points": { "type": "array", "items": { "type": "string" }, "description": "Canonical metric keys, e.g. [\"electrical.voltage\", \"electrical.active_power\"]." }
+        }
+      }
+    }
+  }
+}

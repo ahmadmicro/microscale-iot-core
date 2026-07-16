@@ -1,0 +1,54 @@
+# Canonical Telemetry Metric Registry — v1.0
+# The stable contract for Microscale's IoT services (Layer 2 IP).
+#
+# Rules:
+#  - Every adapter MUST convert readings to the metric's canonical `unit` before publishing.
+#  - Unit codes follow UCUM (Unified Code for Units of Measure) — a real standard, not ad-hoc
+#    strings — so the schema stays reference-based, not hardcoded per jurisdiction/device.
+#  - `kind`: gauge (instantaneous), counter (monotonic cumulative), state (discrete/enum/bool).
+#  - Adding a metric is a MINOR version bump; changing a unit/kind is MAJOR (breaks consumers).
+version: "1.0"
+
+metrics:
+  # ── Electrical (the core energy story; grid + generator) ───────────────────
+  electrical.voltage:        { unit: V,     kind: gauge,   category: electrical }
+  electrical.current:        { unit: A,     kind: gauge,   category: electrical }
+  electrical.active_power:   { unit: W,     kind: gauge,   category: electrical }
+  electrical.reactive_power: { unit: var,   kind: gauge,   category: electrical }
+  electrical.apparent_power: { unit: "V.A", kind: gauge,   category: electrical }
+  electrical.power_factor:   { unit: "1",   kind: gauge,   category: electrical, range: [-1, 1] }
+  electrical.frequency:      { unit: Hz,    kind: gauge,   category: electrical }
+  electrical.energy:         { unit: W.h,   kind: counter, category: electrical }  # cumulative import
+  electrical.energy_export:  { unit: W.h,   kind: counter, category: electrical }
+
+  # ── Environment ────────────────────────────────────────────────────────────
+  environment.temperature:   { unit: Cel,   kind: gauge, category: environment }
+  environment.humidity:      { unit: "%",   kind: gauge, category: environment }   # %RH
+  environment.co2:           { unit: "[ppm]", kind: gauge, category: environment }
+  environment.occupancy:     { unit: "1",   kind: gauge, category: environment }   # count
+
+  # ── Fuel / genset (Scope 1 carbon: on-site combustion) ─────────────────────
+  fuel.level:                { unit: L,     kind: gauge,   category: fuel }
+  fuel.level_fraction:       { unit: "1",   kind: gauge,   category: fuel, range: [0, 1] }
+  fuel.flow:                 { unit: L/h,   kind: gauge,   category: fuel }
+  fuel.consumed:             { unit: L,     kind: counter, category: fuel }
+  genset.run_hours:          { unit: h,     kind: counter, category: genset }
+  genset.state:              { unit: enum,  kind: state,   category: genset, enum: [off, running, fault] }
+
+  # ── Flow (water / gas / steam / compressed air) ────────────────────────────
+  flow.volumetric:           { unit: m3/h,  kind: gauge,   category: flow }
+  flow.volume_total:         { unit: m3,    kind: counter, category: flow }
+  flow.mass:                 { unit: kg/h,  kind: gauge,   category: flow }         # steam, compressed air
+
+  # ── Production / process ───────────────────────────────────────────────────
+  production.count:          { unit: "1",   kind: counter, category: production }
+  production.rate:           { unit: /h,    kind: gauge,   category: production }
+
+  # ── Device / control (the home-energy actuation case) ──────────────────────
+  device.relay:              { unit: enum,  kind: state, category: device, enum: [off, on], writable: true }
+  device.online:             { unit: bool,  kind: state, category: device }
+  device.rssi:               { unit: "dB[mW]", kind: gauge, category: device }
+
+# Source tags (for carbon attribution) are NOT metrics — they are a dimension carried on each
+# reading (`src` in the envelope): grid | generator | solar | battery | unknown.
+# grid electricity → Scope 2; generator fuel/energy → Scope 1.

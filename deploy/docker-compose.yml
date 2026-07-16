@@ -1,0 +1,15 @@
+# Local broker for the vertical slice.
+#
+# Uses Mosquitto — tiny, trivially configured for dev (anonymous + WebSocket). PRODUCTION target
+# is EMQX (per-topic ACLs, JWT auth, dashboard) — see deploy/README.md. The canonical schema,
+# adapters, and dashboard are broker-agnostic, so swapping Mosquitto→EMQX changes nothing above.
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    container_name: iotcore_broker
+    ports:
+      - "1883:1883"   # MQTT over TCP   — adapters connect here
+      - "9001:9001"   # MQTT over WS    — the browser dashboard connects here
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    restart: unless-stopped

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://microscale.io/schemas/telemetry/reading-1.0.json",
+  "title": "Canonical Telemetry Reading",
+  "description": "The JSON payload published (retained) to ms/<site>/<device>/<channel>/<metric>. One reading per metric per channel. Kept small: the metric key lives in the topic, not the payload.",
+  "type": "object",
+  "required": ["t", "v"],
+  "additionalProperties": false,
+  "properties": {
+    "t": {
+      "type": "integer",
+      "description": "Measurement time at the source, UTC epoch milliseconds. Set by the device/edge, NOT the cloud — this is what makes store-and-forward reconciliation correct."
+    },
+    "v": {
+      "type": ["number", "string", "boolean"],
+      "description": "Value expressed in the metric's canonical unit (see metrics.yaml). Adapters convert before publishing."
+    },
+    "u": {
+      "type": "string",
+      "description": "UCUM unit code. Optional (implied by the metric registry) but SHOULD be sent for self-describing streams; if present it MUST equal the registry unit."
+    },
+    "q": {
+      "type": "string",
+      "enum": ["good", "stale", "estimated", "bad", "simulated"],
+      "default": "good",
+      "description": "Quality flag. 'stale' = last-known replayed after an outage; 'estimated' = interpolated/derived; 'simulated' = demo/synthetic."
+    },
+    "src": {
+      "type": "string",
+      "enum": ["grid", "generator", "solar", "battery", "unknown"],
+      "description": "Energy source for carbon attribution. grid → Scope 2; generator → Scope 1. Omit for non-energy metrics."
+    },
+    "seq": {
+      "type": "integer",
+      "description": "Monotonic per-(device,channel,metric) sequence number. Lets consumers detect gaps and lets the edge replay buffered readings in order after reconnect."
+    }
+  }
+}
