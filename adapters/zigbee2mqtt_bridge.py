@@ -102,17 +102,17 @@ class Zigbee2MqttBridge:
             points.append("device.relay")
         if d.light:
             points += ["light.brightness", "light.color_temp", "light.color"]
-        return {
+        desc = {
             "schema_version": schema.SCHEMA_VERSION,
             "device_id": d.device_id,
             "site": self.site,
             "model": d.model,
             "adapter": "zigbee2mqtt_bridge@0.1",
             "source": d.source,
-            "accuracy_class": None,
             "online": True,
             "channels": [{"id": "main", "points": points}],
         }
+        return {k: v for k, v in desc.items() if v is not None}
 
     # ---- lifecycle ----
     def run(self) -> None:

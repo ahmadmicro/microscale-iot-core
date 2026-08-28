@@ -1,6 +1,10 @@
 # Canonical Telemetry Metric Registry — v1.0
 # The stable contract for Microscale's IoT services (Layer 2 IP).
 #
+# STATUS: v1.0 FROZEN 2026-08-28 (git tag schema-v1.0). From here on, adding a metric is a
+# MINOR bump (1.1); changing any existing unit/kind is MAJOR. CI enforces the contract:
+# tests/test_schema.py validates envelopes and descriptors against the JSON Schemas.
+#
 # Rules:
 #  - Every adapter MUST convert readings to the metric's canonical `unit` before publishing.
 #  - Unit codes follow UCUM (Unified Code for Units of Measure) — a real standard, not ad-hoc

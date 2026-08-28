@@ -8,8 +8,9 @@ hardware:
   firmware_shipped: EmberZNet NCP (EZSP v8)
 
 gate:
-  stock: PASS — no cloud at all; ships as a plain EmberZNet NCP serial coordinator,
-    works with Zigbee2MQTT (`adapter: ember`) and ZHA out of the box.
+  stock: >-
+    PASS — no cloud at all; ships as a plain EmberZNet NCP serial coordinator,
+    works with Zigbee2MQTT ("adapter: ember") and ZHA out of the box.
 
 benchmark: TBD (bench-eval pending — pair with in-stock Zigbee switches/terminal blocks/bulbs)
 

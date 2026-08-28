@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Start MQTT broker (same config as local dev)
+        run: |
+          docker run -d --name broker -p 1883:1883 \
+            -v $PWD/deploy/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
+            eclipse-mosquitto:2
+          timeout 30 sh -c 'until nc -z localhost 1883; do sleep 0.5; done'
+
+      - name: Install dependencies
+        run: pip install -r adapters/requirements.txt pytest jsonschema
+
+      - name: Run tests (schema contract + adapter integration)
+        run: pytest tests/ -v

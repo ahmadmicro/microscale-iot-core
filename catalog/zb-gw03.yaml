@@ -9,10 +9,11 @@ hardware:
 
 gate:
   stock: FAIL — eWeLink-cloud locked out of the box
-  flashed: PASS — community-proven Tasmota32 ZBBridge or ESPHome on the ESP32, plus
-    coordinator (or router) firmware on the EFR32MG21. Then fully local, two modes:
-      a) Zigbee2Tasmota — gateway itself publishes Zigbee device data over MQTT
-      b) remote serial coordinator (TCP) for a Zigbee2MQTT/ZHA instance on the edge gateway
+  flashed: >-
+    PASS — community-proven Tasmota32 ZBBridge or ESPHome on the ESP32, plus
+    coordinator (or router) firmware on the EFR32MG21. Then fully local, two modes —
+    (a) Zigbee2Tasmota, the gateway itself publishes Zigbee device data over MQTT;
+    (b) remote serial coordinator (TCP) for a Zigbee2MQTT/ZHA instance on the edge gateway.
 
 benchmark: TBD (bench-eval pending — pair with in-stock Zigbee switches/bulbs)
 

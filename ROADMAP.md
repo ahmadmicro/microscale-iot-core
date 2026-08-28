@@ -29,7 +29,10 @@ Turn the simulator into real hardware and harden the IP.
       *Built as designed: declarative `ModbusAdapter` base in the SDK + `adapters/orno_we516.py`
       register declaration; verified against a register-accurate Modbus TCP simulator with
       per-phase L1/L2/L3 channels; remaining: verify register map on a physical meter.*
-- [ ] **Freeze canonical schema v1.0** + add JSON-Schema validation of envelopes/descriptors in CI.
+- [x] **Freeze canonical schema v1.0** + add JSON-Schema validation of envelopes/descriptors in CI.
+      *Frozen 2026-08-28 (tag `schema-v1.0`) after being battle-tested by three adapter families
+      (medium, sensor, and light metrics all landed pre-freeze). `tests/` + GitHub Actions run the
+      contract tests and all adapter integration suites against a real broker.*
 - [ ] **First catalog entries**: bench each device vs a reference meter → `catalog/<model>.yaml`
       (measured accuracy, procurement, gate results). This is the compounding deposit.
 - **Engagement payoff:** the Habeeb PoC "hero deliverable" (live V/A/W/kWh + programmatic relay)

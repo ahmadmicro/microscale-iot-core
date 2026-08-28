@@ -106,7 +106,7 @@ class Adapter:
             pts = channels.setdefault(item.channel, [])
             if item.metric not in pts:          # a writable point is both a point + a command
                 pts.append(item.metric)
-        return {
+        desc = {
             "schema_version": schema.SCHEMA_VERSION,
             "device_id": self.device_id,
             "site": self.site,
@@ -117,6 +117,8 @@ class Adapter:
             "online": True,
             "channels": [{"id": cid, "points": pts} for cid, pts in channels.items()],
         }
+        # unset optionals are OMITTED, not null — the descriptor schema has no null members
+        return {k: v for k, v in desc.items() if v is not None}
 
     # ---- lifecycle ----
     def run(self) -> None:
