@@ -1,0 +1,25 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: tongou.to-q-sy1-jzt     # Tongou DIN-rail smart switch/breaker, 63 A, power monitoring
+aliases: [at-q-sy1-jzt, to-q-sy1, starblock-terminal-block]
+class: Cat3                    # DIN-rail actuator + meter (distribution-box install)
+interface: zigbee              # Tuya TS0601-based, natively supported by Zigbee2MQTT
+metrics: [device.relay, electrical.active_power, electrical.voltage, electrical.current,
+          electrical.energy]
+gate:
+  stock: PASS — vendor markets it as Tuya-hub-only, but Zigbee2MQTT supports it natively,
+    fully local; no Tuya gateway or cloud involved.
+benchmark: TBD (63 A claim + power/energy vs reference meter — SBE Cat-3 bench protocol)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay + power_metering)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - The Cat-3 DIN-rail story: whole-circuit sub-metering + remote disconnect in the
+    distribution box — a Zigbee sibling to the planned Modbus (Orno WE-516) path, far
+    cheaper to install where a Zigbee mesh already exists on site.
+  - Z2M POLLS its electrical readings (default 60 s) — set the device option
+    measurement_poll_interval: 10 for live dashboard cards; readings are polled, not
+    push-on-change, so expect fixed-cadence envelopes.
+  - Set power_outage_memory: restore so the breaker returns to its pre-outage state
+    after grid loss — the right default for the Nigerian outage pattern.
+  - Latching relay (holds state without coil power). 1P+N, 90–240 VAC. Mains-powered,
+    so it also strengthens the Zigbee mesh as a router.
+  - Supports on_time/off_wait_time (timed off) and OTA updates via Z2M.

@@ -37,3 +37,13 @@ devices:
     model: aqara.ws-euk01        # wall switch (no neutral variant has no metering)
     source: grid
     relay: true
+
+  # Tongou DIN-rail 63 A switch/breaker with metering ("starblock" terminal block).
+  # In Z2M device options set measurement_poll_interval: 10 — the default 60 s poll is
+  # too slow for live cards.
+  din-01:
+    name: tongou_din_01
+    model: tongou.to-q-sy1-jzt
+    source: grid
+    relay: true
+    power_metering: true
