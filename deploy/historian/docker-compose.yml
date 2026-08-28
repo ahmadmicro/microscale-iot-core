@@ -1,0 +1,42 @@
+# Data platform — TimescaleDB + historian sink + read API (Phase 3).
+# Runs beside the broker (cloud VPS). Start:
+#
+#   PG_PASSWORD=<strong> MQTT_HOST=<broker> docker compose up -d
+#
+# On EMQX, give the sink an `edge`-role token via MQTT_USERNAME/MQTT_PASSWORD.
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: iotcore_tsdb
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD}
+      POSTGRES_DB: iotcore
+    volumes:
+      - tsdb-data:/var/lib/postgresql/data
+      - ../../historian/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    restart: unless-stopped
+
+  sink:
+    build: { context: ../.., dockerfile: historian/Dockerfile }
+    command: ["python", "-m", "historian.sink"]
+    environment:
+      PG_DSN: postgresql://postgres:${PG_PASSWORD}@timescaledb:5432/iotcore
+      MQTT_HOST: ${MQTT_HOST:-localhost}
+      MQTT_PORT: ${MQTT_PORT:-1883}
+      MQTT_USERNAME: ${MQTT_USERNAME:-}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+    depends_on: [timescaledb]
+    restart: unless-stopped
+
+  api:
+    build: { context: ../.., dockerfile: historian/Dockerfile }
+    ports:
+      - "8090:8090"
+    environment:
+      PG_DSN: postgresql://postgres:${PG_PASSWORD}@timescaledb:5432/iotcore
+      API_TOKEN: ${API_TOKEN:-}
+    depends_on: [timescaledb]
+    restart: unless-stopped
+
+volumes:
+  tsdb-data:

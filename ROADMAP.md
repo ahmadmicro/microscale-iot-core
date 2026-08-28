@@ -59,11 +59,19 @@ Make it survive the real world and a hostile network.
 
 ## Phase 3 — Data platform (the API boundary)
 Everything above ingestion; the clean hand-off to analytics.
-- [ ] **Time-series store** (TimescaleDB or InfluxDB): a sink subscribing to `ms/#` → history.
-- [ ] **History/read API** for dashboard charts and downstream consumers.
-- [ ] **Canonical → analytics API** — the stable contract SBE builds EMIS/carbon on (their scope).
-- [ ] **Carbon support**: derive Scope 1 (generator fuel) / Scope 2 (grid) from `src` tags + fuel
+- [x] **Time-series store** (TimescaleDB or InfluxDB): a sink subscribing to `ms/#` → history.
+      *TimescaleDB (SQL is the analytics contract; metadata joins free). `historian/sink.py` ingests
+      envelopes + `$meta`/`$online`; idempotent (q:stale replays and redeliveries dedupe).*
+- [x] **History/read API** for dashboard charts and downstream consumers.
+      *`historian/api.py` (FastAPI): device registry, latest-per-point, raw or time_bucket-aggregated
+      history; optional bearer auth; deploy/historian compose (TSDB + sink + API).*
+- [x] **Canonical → analytics API** — the stable contract SBE builds EMIS/carbon on (their scope).
+      *The historian read API + direct SQL on the readings hypertable is that contract.*
+- [x] **Carbon support**: derive Scope 1 (generator fuel) / Scope 2 (grid) from `src` tags + fuel
       metrics; expose per-source energy rollups.
+      *`/​{site}/energy`: per-src Wh with scope labels, meter-counter audit total, fuel.consumed
+      litres. Verified end-to-end (tests/test_historian.py): the src-split estimate reconciles
+      exactly against the cumulative counter.*
 
 ## Phase 4 — Dashboard as a product
 Harden the differentiator (the thing nobody ships cleanly: open + mobile + easy).
