@@ -71,6 +71,13 @@ Write a new bridge only for a new *family* — follow the same shape: map native
 envelopes via `iotcore.schema.build_envelope`, never echo command state optimistically, republish
 availability to `$online`.
 
+## Device firmware (path C — no adapter at all)
+
+Hardware you program yourself publishes the contract natively: the MicroPython port of the SDK
+lives in [`../firmware/micropython/`](../firmware/micropython/) — see the
+[ESP32 firmware guide](firmware-esp32.md), which doubles as the conformance checklist for a
+future C/ESP-IDF implementation.
+
 ## Consuming data (the historian API)
 
 Read-only HTTP on the historian (`:8090`; bearer token if `API_TOKEN` is set):
