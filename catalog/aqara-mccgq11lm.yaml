@@ -1,0 +1,15 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.mccgq11lm         # Aqara door/window contact sensor
+class: Cat1
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [environment.contact, device.battery]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (report latency on open/close)
+adapter: adapters/zigbee2mqtt_bridge.py (config row, no code)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - Z2M `contact: true` means CLOSED — the bridge maps it to the open/closed enum.
+  - Energy angle: door-open + HVAC-running correlation is a cheap efficiency finding
+    for the SBE energy/carbon story.
+  - CR1632; same Aqara pairing/router quirks as the rest of the family.

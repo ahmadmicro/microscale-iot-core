@@ -1,0 +1,14 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.sjcgq11lm         # Aqara water leak sensor
+class: Cat1
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [environment.leak, device.battery]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (detection + report latency)
+adapter: adapters/zigbee2mqtt_bridge.py (config row, no code)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - Natural pairing with tank-room / pump-room monitoring next to the fuel-level story
+    (tank-01) — leak alert is a high-value, zero-config dashboard card.
+  - CR2032; same Aqara pairing/router quirks as the rest of the family.

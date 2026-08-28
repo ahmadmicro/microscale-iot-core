@@ -1,0 +1,16 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.ws-euk01          # Aqara smart wall switch H1 (no neutral, single rocker)
+class: Cat2                    # mains actuator (no metering on the no-neutral variant)
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [device.relay]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (control latency; relay rating vs load)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - No-neutral wiring fits older Nigerian installations, but check minimum-load
+    requirements with LED lighting. The with-neutral variant (WS-EUK03) adds power
+    metering — prefer it where a neutral wire exists.
+  - Wall switches replace, not plug in — installation cost belongs in the engagement
+    quote, unlike plugs.

@@ -26,6 +26,10 @@ metrics:
   environment.humidity:      { unit: "%",   kind: gauge, category: environment }   # %RH
   environment.co2:           { unit: "[ppm]", kind: gauge, category: environment }
   environment.occupancy:     { unit: "1",   kind: gauge, category: environment }   # count
+  environment.pressure:      { unit: hPa,   kind: gauge, category: environment }   # barometric
+  environment.illuminance:   { unit: lx,    kind: gauge, category: environment }
+  environment.contact:       { unit: enum,  kind: state, category: environment, enum: [open, closed] }
+  environment.leak:          { unit: bool,  kind: state, category: environment }   # water leak detected
 
   # ── Fuel / genset (Scope 1 carbon: on-site combustion) ─────────────────────
   fuel.level:                { unit: L,     kind: gauge,   category: fuel }
@@ -50,6 +54,7 @@ metrics:
   device.relay:              { unit: enum,  kind: state, category: device, enum: [off, on], writable: true }
   device.online:             { unit: bool,  kind: state, category: device }
   device.rssi:               { unit: "dB[mW]", kind: gauge, category: device }
+  device.battery:            { unit: "%",   kind: gauge, category: device, range: [0, 100] }
 
 # Source tags (for carbon attribution) are NOT metrics — they are a dimension carried on each
 # reading (`src` in the envelope): grid | generator | solar | battery | unknown.

@@ -1,0 +1,17 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.wsdcgq11lm        # Aqara temperature/humidity/pressure sensor
+class: Cat1                    # battery sensor endpoint
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [environment.temperature, environment.humidity, environment.pressure, device.battery]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (vs reference thermo-hygrometer; vendor spec ±0.3 °C / ±3 %RH)
+adapter: adapters/zigbee2mqtt_bridge.py (config row, no code)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - CR2032; battery may take up to 24 h to report after pairing. Reports on change
+    thresholds plus ~50-min heartbeat — expect sparse, not periodic, readings.
+  - Aqara quirk: pair close to the coordinator; older units can drop off through
+    non-Xiaomi Zigbee routers. Pairing: hold reset ~5 s until LED blinks.
+  - Its `voltage` field is the battery cell in mV — the bridge deliberately does not
+    map it to electrical.voltage.

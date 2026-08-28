@@ -1,0 +1,17 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.sp-euc01          # Aqara smart plug (EU) with energy metering
+class: Cat2                    # mains actuator + meter
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [device.relay, electrical.active_power, electrical.voltage, electrical.current,
+          electrical.energy]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (power/energy vs reference meter — the Habeeb Cat-2 bench protocol)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay + power_metering)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - Mains-powered, so it also acts as a Zigbee ROUTER — a few of these strengthen the
+    mesh that the battery sensors hang off (mind the Aqara-through-foreign-router quirk:
+    prefer Aqara/compatible routers where Aqara battery sensors must route).
+  - Zigbee alternative to the Tasmota Wi-Fi plug path: same dashboard cards, no Wi-Fi
+    credentials on the device, but needs the coordinator (ZB-GW04/ZB-GW03) on site.

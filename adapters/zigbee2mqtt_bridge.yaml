@@ -1,0 +1,39 @@
+# Zigbee2MQTT bridge config — ONE ROW PER PAIRED DEVICE, no code (path B).
+# Zigbee2MQTT runs on the edge host with an EFR32 coordinator (ZB-GW04 dongle, or a flashed
+# ZB-GW03 as a remote coordinator) and publishes every device on zigbee2mqtt/<friendly_name>.
+# Enable `availability` in Z2M's configuration.yaml so $online tracking works.
+broker:
+  host: localhost
+  port: 1883
+
+site: acme-lagos
+z2m_base: zigbee2mqtt
+
+devices:
+  # Aqara battery sensors — SENSOR_MAP fields apply automatically; their battery-cell
+  # `voltage` (mV) is ignored because power_metering is off.
+  office-climate:
+    name: aqara_temp_office      # Z2M friendly_name
+    model: aqara.wsdcgq11lm      # temperature / humidity / pressure
+  office-motion:
+    name: aqara_motion_office
+    model: aqara.rtcgq11lm       # occupancy / illuminance
+  store-door:
+    name: aqara_door_store
+    model: aqara.mccgq11lm       # contact
+  tank-room-leak:
+    name: aqara_leak_tankroom
+    model: aqara.sjcgq11lm       # water leak
+
+  # Aqara mains devices — relay control, and power_metering unlocks electrical.* readings.
+  plug-02:
+    name: aqara_plug_02
+    model: aqara.sp-euc01        # smart plug with energy metering
+    source: grid
+    relay: true
+    power_metering: true
+  hall-lights:
+    name: aqara_switch_hall
+    model: aqara.ws-euk01        # wall switch (no neutral variant has no metering)
+    source: grid
+    relay: true

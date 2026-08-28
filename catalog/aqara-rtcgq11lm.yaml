@@ -1,0 +1,14 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: aqara.rtcgq11lm         # Aqara motion + illuminance sensor
+class: Cat1
+interface: zigbee              # via Zigbee2MQTT on the edge host
+metrics: [environment.occupancy, environment.illuminance, device.battery]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no vendor hub or cloud.
+benchmark: TBD (occupancy-detection latency + illuminance vs lux meter)
+adapter: adapters/zigbee2mqtt_bridge.py (config row, no code)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - Hardware 60 s dead zone after each motion report; keep Z2M occupancy_timeout at the
+    default 90 s or higher. Fine for occupancy analytics, not for fast lighting control.
+  - CR2450; same Aqara pairing/router quirks as the rest of the family.
