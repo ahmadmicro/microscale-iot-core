@@ -1,0 +1,17 @@
+# Tasmota bridge config — ONE ROW PER FLASHED DEVICE, no code (path B).
+# The bridge maps each device's native Tasmota topics to canonical ms/<site>/<device_id>/...
+# topics, so the dashboard binds to it exactly like any other adapter.
+broker:
+  host: localhost
+  port: 1883
+
+site: acme-lagos
+
+devices:
+  # device_id (canonical) — matches the existing dashboard bindings for plug-01,
+  # so a real flashed plug configured with `Topic tasmota_plug01` replaces the simulator's plug.
+  plug-01:
+    topic: tasmota_plug01     # Tasmota %topic% (set on the device: `Topic tasmota_plug01`)
+    model: sonoff.s26r2       # catalog model id (see catalog/README.md)
+    source: grid              # src dimension stamped on energy readings
+    relay: true               # expose POWER as writable device.relay

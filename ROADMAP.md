@@ -13,8 +13,14 @@ round-trips, dashboard binds over MQTT-over-WebSocket. **This is the architectur
 
 ## Phase 1 — First real devices + freeze the contract  ⟵ NEXT
 Turn the simulator into real hardware and harden the IP.
-- [ ] **Generic Tasmota/ESPHome MQTT bridge** (config-driven, no per-device code) — covers the
+- [x] **Generic Tasmota/ESPHome MQTT bridge** (config-driven, no per-device code) — covers the
       Wi-Fi smart plugs (Habeeb Cat-2). One bridge → every flashed plug. See `docs/device-integration.md` path B.
+      *Built and verified round-trip against a simulated Tasmota device (`adapters/tasmota_bridge.py`);
+      remaining: wire one real flashed plug.*
+- [ ] **Zigbee family via Zigbee2MQTT** — ZB-GW04 v1.2 USB coordinator on the edge host (works
+      stock) and/or flashed ZB-GW03 Ethernet gateway; one generic `zigbee2mqtt` bridge (same
+      pattern as the Tasmota bridge) unlocks the in-stock Zigbee switches, terminal blocks, and
+      RGB bulbs as config rows. Candidate records: `catalog/zb-gw03.yaml`, `catalog/zb-gw04.yaml`.
 - [ ] **One Modbus meter adapter** (typed, e.g. Orno WE-516) — covers electricity sub-metering
       (SBE) and DIN-rail Cat-3. See `design/adapters/example_orno_we516.py`.
 - [ ] **Freeze canonical schema v1.0** + add JSON-Schema validation of envelopes/descriptors in CI.

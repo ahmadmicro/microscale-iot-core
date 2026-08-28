@@ -1,0 +1,34 @@
+# CANDIDATE — passes the open-data gate only after flashing; not yet benchmarked on our bench.
+model: ewelink.zb-gw03
+aliases: [eachen-zigbee-smart-hub, smartwise-zigbee-bridge-pro]
+class: infrastructure          # Zigbee coordinator/gateway, not a metering endpoint
+interface: mqtt                # after Tasmota flash (Zigbee2Tasmota), or serial-over-TCP for Z2M/ZHA
+hardware:
+  host_mcu: ESP32 (Ethernet + Wi-Fi)
+  radio: Silicon Labs EFR32MG21 (Zigbee 3.0)
+
+gate:
+  stock: FAIL — eWeLink-cloud locked out of the box
+  flashed: PASS — community-proven Tasmota32 ZBBridge or ESPHome on the ESP32, plus
+    coordinator (or router) firmware on the EFR32MG21. Then fully local, two modes:
+      a) Zigbee2Tasmota — gateway itself publishes Zigbee device data over MQTT
+      b) remote serial coordinator (TCP) for a Zigbee2MQTT/ZHA instance on the edge gateway
+
+benchmark: TBD (bench-eval pending — pair with in-stock Zigbee switches/bulbs)
+
+adapter: zigbee2mqtt bridge (planned, same family-bridge pattern as adapters/tasmota_bridge.py)
+
+procurement:
+  supplier: TBD (widely available as eWeLink/EACHEN/SmartWise branding)
+  landed_unit_cost: TBD
+  certification: TBD (SONCAP)
+
+notes: |
+  - Ethernet uplink is the differentiator vs Wi-Fi-only bridges — right fit for client sites
+    with flaky Wi-Fi; PoE would still need a splitter.
+  - Initial ESP32 flash requires opening the case and a serial adapter (no stock OTA path);
+    budget bench time per unit until we script it.
+  - Prefer mode (b) (remote coordinator for Zigbee2MQTT) — richer device support than
+    Zigbee2Tasmota and one canonical bridge covers both this and the ZB-GW04 dongle.
+  - References: cnx-software teardown/Tasmota port write-up; Tasmota discussion #12764;
+    syssi/esphome-zb-gw03; blakadder template (ewelink_ZB-GW03).

@@ -1,0 +1,31 @@
+# CANDIDATE — passes the open-data gate AS SHIPPED; not yet benchmarked on our bench.
+model: easyiot.zb-gw04-v1.2
+class: infrastructure          # USB Zigbee coordinator for the edge gateway, not an endpoint
+interface: usb-serial          # CH340E UART; consumed by Zigbee2MQTT/ZHA on the gateway host
+hardware:
+  radio: Silicon Labs EFR32MG21 (Zigbee 3.0), PCB antenna
+  usb_uart: WCH CH340E, hardware flow control (v1.2)
+  firmware_shipped: EmberZNet NCP (EZSP v8)
+
+gate:
+  stock: PASS — no cloud at all; ships as a plain EmberZNet NCP serial coordinator,
+    works with Zigbee2MQTT (`adapter: ember`) and ZHA out of the box.
+
+benchmark: TBD (bench-eval pending — pair with in-stock Zigbee switches/terminal blocks/bulbs)
+
+adapter: zigbee2mqtt bridge (planned, same family-bridge pattern as adapters/tasmota_bridge.py)
+
+procurement:
+  supplier: TBD (easyiot; AliExpress widely stocked)
+  landed_unit_cost: TBD
+  certification: TBD (SONCAP)
+
+notes: |
+  - Lowest-friction Zigbee entry: plug into the Phase-2 edge gateway (Pi/mini-PC) running
+    Zigbee2MQTT and every paired device appears as JSON over MQTT — one canonical bridge
+    (config rows per device) unlocks the whole in-stock Zigbee inventory.
+  - Use Zigbee2MQTT's `ember` driver; the older `ezsp` driver is deprecated.
+  - Mount on a short USB extension lead — EFR32 coordinators are sensitive to USB3/host RF noise.
+  - RGB bulbs need light-control metrics (brightness/color) that are NOT in canonical v1.0 —
+    decide before the schema freeze whether they make v1.0 or wait for a MINOR bump.
+  - References: blakadder easyiot_ZB-GW04 entry; techtactician review/connection guide.
