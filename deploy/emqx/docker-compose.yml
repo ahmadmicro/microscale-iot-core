@@ -1,0 +1,38 @@
+# PRODUCTION broker — EMQX 5 with JWT authentication + per-client topic ACLs.
+#
+# Replaces the dev Mosquitto (deploy/docker-compose.yml). The canonical schema, adapters,
+# and dashboard are broker-agnostic; only credentials change: clients authenticate with a
+# JWT minted by tools/mint_token.py, passed as the MQTT password. The token embeds the
+# client's topic whitelist (acl claim); everything else is denied (no_match=deny).
+#
+#   JWT_SECRET=<long random string> docker compose up -d
+#
+# TLS: terminate WSS at nginx in front of port 8083 — see nginx-wss.conf.sample and
+# README.md (certbot). Port 1883 stays plaintext for the LAN/edge side; do NOT expose
+# it to the internet — edge gateways reach the broker through their site VPN or MQTTS.
+services:
+  emqx:
+    image: emqx/emqx:5.8
+    container_name: iotcore_emqx
+    ports:
+      - "1883:1883"    # MQTT/TCP — edge gateways, adapters (LAN/VPN only)
+      - "8083:8083"    # MQTT/WebSocket — dashboard (front with nginx TLS)
+      - "18083:18083"  # EMQX dashboard UI (admin/public — change the password, firewall it)
+    environment:
+      # authn: single JWT provider, HMAC-signed, token carried in the MQTT password
+      EMQX_AUTHENTICATION__1__MECHANISM: jwt
+      EMQX_AUTHENTICATION__1__FROM: password
+      EMQX_AUTHENTICATION__1__USE_JWKS: "false"
+      EMQX_AUTHENTICATION__1__ALGORITHM: hmac-based
+      EMQX_AUTHENTICATION__1__SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      EMQX_AUTHENTICATION__1__SECRET_BASE64_ENCODED: "false"
+      EMQX_AUTHENTICATION__1__ACL_CLAIM_NAME: acl
+      # authz: the JWT acl claim is the whole policy; nothing else is allowed
+      EMQX_AUTHORIZATION__NO_MATCH: deny
+      EMQX_AUTHORIZATION__DENY_ACTION: ignore
+    volumes:
+      - emqx-data:/opt/emqx/data
+    restart: unless-stopped
+
+volumes:
+  emqx-data:

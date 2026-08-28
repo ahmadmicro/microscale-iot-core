@@ -40,11 +40,21 @@ Turn the simulator into real hardware and harden the IP.
 
 ## Phase 2 — Edge gateway + production security
 Make it survive the real world and a hostile network.
-- [ ] **Edge-gateway packaging** (Pi / mini-PC): run bridges/adapters on-site; **local buffering to
+- [x] **Edge-gateway packaging** (Pi / mini-PC): run bridges/adapters on-site; **local buffering to
       disk + store-and-forward + auto-resync** on reconnect (the `seq`/`q:stale` plumbing already exists).
-- [ ] **Swap Mosquitto → EMQX**: JWT authn, **per-topic ACLs** (a client token reads `ms/<their-site>/#`,
+      *Done in software: SDK disk spool (survives restarts/power cuts, replays in seq order marked
+      `q:stale`, unit-tested) + `deploy/edge/` Docker packaging with per-family service profiles and a
+      Pi provisioning guide. Remaining: burn-in on a physical Pi.*
+- [x] **Swap Mosquitto → EMQX**: JWT authn, **per-topic ACLs** (a client token reads `ms/<their-site>/#`,
       writes only its `/cmd`), TLS fronted by nginx/certbot.
+      *`deploy/emqx/` + `tools/mint_token.py` (device/edge/dashboard roles, ACL embedded in the token).
+      Security model verified live against EMQX 5.8 (`tests/test_emqx_acl.py`): forged tokens refused,
+      cross-site/cross-device spoofing blocked, dashboards can command but not fabricate readings.
+      TLS is documented (nginx + certbot sample); certificates happen at deploy time.*
 - [ ] **OTA firmware update** with rollback (a stated production requirement).
+      *Design fixed per family in `docs/ota.md` (Tasmota fleet OTA + safeboot; Z2M OTA with a
+      pin-what-you-bench policy; A/B + health-gated rollback for our own ESP32 firmware).
+      Implementation is firmware-side — lands with the first path-C device.*
 - **Engagement payoff:** satisfies "zero data loss on outage" + "own your pipe, securely" gates.
 
 ## Phase 3 — Data platform (the API boundary)

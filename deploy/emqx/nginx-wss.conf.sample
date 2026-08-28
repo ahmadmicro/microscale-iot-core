@@ -1,0 +1,18 @@
+# TLS termination for the dashboard's MQTT-over-WebSocket connection.
+# certbot manages the certificate:  certbot --nginx -d mqtt.<yourdomain>
+# The dashboard then connects to  wss://mqtt.<yourdomain>/mqtt  (mqtt.js default path).
+server {
+    listen 443 ssl;
+    server_name mqtt.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/mqtt.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/mqtt.example.com/privkey.pem;
+
+    location /mqtt {
+        proxy_pass http://127.0.0.1:8083/mqtt;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 120s;   # > MQTT keepalive so idle connections survive
+    }
+}

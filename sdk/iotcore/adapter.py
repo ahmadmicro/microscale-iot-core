@@ -7,7 +7,9 @@ Responsibilities handled here (so a device adapter doesn't repeat them):
   - poll `read()` every `poll_interval`, wrap each value in a canonical envelope, publish RETAINED
     to  ms/<site>/<device>/<channel>/<metric>,
   - subscribe writable points' /cmd topics and dispatch to `on_command`, echoing state back,
-  - buffer readings while offline and replay them (in seq order) on reconnect.
+  - buffer readings while offline and replay them (in seq order, marked q:stale) on
+    reconnect — in memory by default, or on disk when constructed with spool_dir=
+    (edge-gateway mode: the buffer survives restarts and power cuts).
 
 An adapter subclass declares its channel/points and implements `read()` (and `on_command` if it has
 writable points). That terse authoring experience is the DX harvested from NodeWire — now over
@@ -19,6 +21,7 @@ import json
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Callable
 
 import paho.mqtt.client as mqtt
@@ -70,13 +73,20 @@ class Adapter:
     points: list[Point] = []
     commands: list[Command] = []
 
-    def __init__(self, *, site: str, device_id: str, host: str = "localhost", port: int = 1883):
+    def __init__(self, *, site: str, device_id: str, host: str = "localhost", port: int = 1883,
+                 spool_dir: str | None = None):
         self.site = site
         self.device_id = device_id
         self.host = host
         self.port = port
         self._seq: dict[tuple[str, str], int] = {}
         self._buffer: deque[tuple[str, dict[str, Any]]] = deque(maxlen=10000)
+        # spool_dir enables DISK-backed store-and-forward (edge-gateway mode): readings
+        # taken while offline survive a process restart / power cut and replay on reconnect
+        self._spool: Path | None = None
+        if spool_dir is not None:
+            self._spool = Path(spool_dir) / f"{site}.{device_id}.spool.jsonl"
+            self._spool.parent.mkdir(parents=True, exist_ok=True)
         self._connected = False
         self._client = mqtt.Client(client_id=f"{site}.{device_id}")
         self._client.on_connect = self._on_connect
@@ -142,10 +152,26 @@ class Adapter:
         self._publish(self._topic_meta_online(), "true", retain=True)
         for c in self.commands:
             client.subscribe(self._topic_cmd(c.metric, c.channel), qos=1)
-        # replay anything buffered while we were offline
-        while self._buffer:
-            topic, env = self._buffer.popleft()
+        self._replay_buffered()
+
+    def _replay_buffered(self) -> None:
+        """Replay disk-spooled then in-memory readings, oldest first, marked q:stale so
+        consumers can tell replayed history from live data. The spool is deleted only
+        after full replay — a crash mid-replay re-sends (seq lets consumers dedupe)."""
+        def send(topic: str, env: dict[str, Any]) -> None:
+            env.setdefault("q", "stale")
             self._client.publish(topic, json.dumps(env), qos=1, retain=True)
+
+        if self._spool is not None and self._spool.exists():
+            for line in self._spool.read_text().splitlines():
+                try:
+                    topic, env = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                send(topic, env)
+            self._spool.unlink()
+        while self._buffer:
+            send(*self._buffer.popleft())
 
     def _on_message(self, client, userdata, msg):  # noqa: ANN001
         parts = msg.topic.split("/")
@@ -186,6 +212,9 @@ class Adapter:
         topic = self._topic_point(metric, channel)
         if self._connected:
             self._client.publish(topic, json.dumps(env), qos=1, retain=True)
+        elif self._spool is not None:
+            with self._spool.open("a") as fh:
+                fh.write(json.dumps([topic, env]) + "\n")
         else:
             self._buffer.append((topic, env))
 

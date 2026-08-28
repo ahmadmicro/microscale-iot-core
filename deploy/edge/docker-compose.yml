@@ -1,0 +1,52 @@
+# Edge gateway (Pi 4 / mini-PC) — runs on-site, translates local devices to canonical
+# topics on the (remote or local) broker. Enable only the services the site needs:
+#
+#   docker compose --profile zigbee --profile tasmota up -d
+#   docker compose --profile modbus up -d
+#
+# Site configs live in ./config/ (copied from adapters/*.yaml, broker host edited).
+# All services restart unless stopped and survive reboots — provisioning in README.md.
+services:
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    profiles: [zigbee]
+    restart: unless-stopped
+    volumes:
+      - z2m-data:/app/data
+    devices:
+      - ${ZIGBEE_DONGLE:-/dev/ttyACM0}:/dev/ttyACM0   # ZB-GW04 coordinator
+    environment:
+      TZ: Africa/Lagos
+
+  z2m-bridge:
+    build: { context: ../.., dockerfile: deploy/edge/Dockerfile }
+    profiles: [zigbee]
+    restart: unless-stopped
+    command: ["python", "-m", "adapters.zigbee2mqtt_bridge", "/config/zigbee2mqtt_bridge.yaml"]
+    volumes:
+      - ./config:/config:ro
+
+  tasmota-bridge:
+    build: { context: ../.., dockerfile: deploy/edge/Dockerfile }
+    profiles: [tasmota]
+    restart: unless-stopped
+    command: ["python", "-m", "adapters.tasmota_bridge", "/config/tasmota_bridge.yaml"]
+    volumes:
+      - ./config:/config:ro
+
+  orno-meter:
+    build: { context: ../.., dockerfile: deploy/edge/Dockerfile }
+    profiles: [modbus]
+    restart: unless-stopped
+    command: ["python", "-m", "adapters.orno_we516",
+              "--site", "${SITE:?set SITE}", "--device", "${METER_ID:-meter-01}",
+              "--host", "${BROKER_HOST:-localhost}",
+              "--serial", "/dev/ttyUSB0"]
+    devices:
+      - ${RS485_ADAPTER:-/dev/ttyUSB0}:/dev/ttyUSB0
+    volumes:
+      - spool:/var/spool/iotcore    # store-and-forward across restarts/outages
+
+volumes:
+  z2m-data:
+  spool:
