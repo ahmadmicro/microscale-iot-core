@@ -26,9 +26,12 @@ from datetime import datetime, timedelta, timezone
 
 import psycopg
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from psycopg.rows import dict_row
 
 app = FastAPI(title="Microscale Historian", version="0.1")
+# the dashboard PWA fetches charts from another origin; the API is read-only
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_headers=["Authorization"])
 
 BUCKET_RE = re.compile(r"^\d+ (second|minute|hour|day|week)s?$")
 SCOPE = {"grid": "scope2", "generator": "scope1", "solar": "none", "battery": "none"}

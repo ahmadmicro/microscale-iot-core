@@ -7,6 +7,8 @@
 @media (prefers-color-scheme: dark) {
   :root { --bg:#0e1216; --surface:#171d23; --text:#e6edf3; --muted:#8b98a5; --border:#252d35; }
 }
+/* theme.mode: "dark" forces dark regardless of OS preference */
+html.dark { --bg:#0e1216; --surface:#171d23; --text:#e6edf3; --muted:#8b98a5; --border:#252d35; }
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
@@ -53,3 +55,12 @@ main#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px
 .toggle.on::after { transform: translateX(22px); }
 .toggle.pending { opacity: .55; }
 .stale { color: var(--warn) !important; }
+#head-right { display: flex; align-items: center; gap: 8px; }
+.logo { height: 22px; margin-right: 8px; vertical-align: middle; }
+.bell { border: 0; background: rgba(255,255,255,.18); border-radius: 999px; padding: 3px 8px; cursor: pointer; opacity: .65; }
+.bell.on { opacity: 1; background: rgba(255,255,255,.3); }
+.card.wide { grid-column: 1 / -1; }
+.chart { width: 100%; height: 120px; margin-top: 4px; }
+.chart-line { stroke: var(--brand); }
+.chart-band { fill: color-mix(in srgb, var(--brand) 15%, transparent); }
+.toggle.readonly { cursor: not-allowed; opacity: .5; }

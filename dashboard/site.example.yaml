@@ -1,0 +1,34 @@
+# Dashboard AUTHORING spec — compiled + validated by tools/build_dashboard.py into
+# dashboard.json (never edit dashboard.json by hand). Theme per client with --theme.
+title: Plant Room — Live
+site: acme-lagos
+broker: ws://localhost:9001/mqtt
+api: http://localhost:8090          # historian read API (chart cards)
+defaultRole: operator               # ?role=viewer in the URL for read-only views
+theme: { brand: "#0a7d55", mode: auto }
+
+pages:
+  - name: Overview
+    cards:
+      - { type: metric, title: Total Load, bind: ms/acme-lagos/main-meter/main/electrical.active_power, format: power, history: "60" }
+      - { type: gauge, title: Voltage, bind: ms/acme-lagos/main-meter/main/electrical.voltage, min: 200, max: 250, warn: [210, 245] }
+      - { type: source-split, title: Power source, bind: ms/acme-lagos/main-meter/main/electrical.active_power }
+      - { type: switch, title: Water Heater, bind: ms/acme-lagos/plug-01/main/device.relay,
+          write: ms/acme-lagos/plug-01/main/device.relay/cmd, writeRoles: [operator] }
+      - { type: metric, title: Diesel Tank, bind: ms/acme-lagos/tank-01/main/fuel.level_fraction,
+          format: percent, alert: { below: 0.15 } }
+
+  - name: History
+    cards:
+      - { type: chart, title: Load — last 24 h, metric: electrical.active_power,
+          device: main-meter, bucket: 15 minutes, hours: 24, format: power }
+      - { type: chart, title: Voltage — last 24 h, metric: electrical.voltage,
+          device: main-meter, bucket: 15 minutes, hours: 24, format: number, unit: V }
+
+  - name: Power
+    roles: [operator]               # page hidden from viewers
+    cards:
+      - { type: metric, title: Frequency, bind: ms/acme-lagos/main-meter/main/electrical.frequency, format: number, unit: Hz }
+      - { type: metric, title: Power Factor, bind: ms/acme-lagos/main-meter/main/electrical.power_factor, format: number }
+      - { type: metric, title: Energy (import), bind: ms/acme-lagos/main-meter/main/electrical.energy, format: energy }
+      - { type: metric, title: Plug draw, bind: ms/acme-lagos/plug-01/main/electrical.active_power, format: power }

@@ -26,6 +26,9 @@ def test_dashboard_bindings_use_prefix_and_known_metrics():
     doc = json.loads((ROOT / "dashboard" / "dashboard.json").read_text())
     for page in doc["pages"]:
         for card in page["cards"]:
+            if card["type"] == "chart":
+                assert schema.is_metric(card["metric"]), card["metric"]
+                continue
             for key in ("bind", "write"):
                 if key not in card:
                     continue

@@ -75,9 +75,19 @@ Everything above ingestion; the clean hand-off to analytics.
 
 ## Phase 4 — Dashboard as a product
 Harden the differentiator (the thing nobody ships cleanly: open + mobile + easy).
-- [ ] History charts (from Phase 3), **PWA push alerts** (abnormal-consumption threshold → notify).
-- [ ] Per-client **theming/branding** build + scoped tokens; multi-page/multi-site.
-- [ ] Role-based views; author-time validation of specs against the metric registry.
+- [x] History charts (from Phase 3), **PWA push alerts** (abnormal-consumption threshold → notify).
+      *Chart cards pull time_bucket aggregates from the historian API (avg line + min/max band, no
+      chart library). Alerts: `alert: {below|above}` on any metric card raises an OS notification on
+      the rising edge (opt-in bell). True background Web Push (VAPID server push with the app closed)
+      is deferred — needs a push service alongside the historian.*
+- [x] Per-client **theming/branding** build + scoped tokens; multi-page/multi-site.
+      *`build_dashboard.py --theme client.yaml` stamps name/brand/logo/mode into the spec + PWA
+      manifest (see `dashboard/themes/`). Multi-site = one authoring spec per site.*
+- [x] Role-based views; author-time validation of specs against the metric registry.
+      *`?role=viewer` hides operator pages and disables writes (UI scoping; real enforcement is the
+      EMQX ACL). The build FAILS on unknown card types/metrics, wrong-site topics, or writes to
+      non-writable metrics — verified end-to-end in a headless browser (live cards, chart page,
+      relay round trip, role filtering).*
 - [ ] Decide open-source split of `dashboard/` (MIT) vs. proprietary core.
 
 ## Phase 5 — Layer 3 product (ONLY when pulled by repetition)

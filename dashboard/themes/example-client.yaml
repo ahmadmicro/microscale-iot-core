@@ -1,0 +1,6 @@
+# Per-client branding — merged over the authoring spec by build_dashboard.py --theme.
+# One file per client engagement; the spec stays shared.
+name: SchimaticBlue Energy
+brand: "#1d4ed8"
+mode: auto            # auto | dark
+# logo: logo-sbe.svg  # optional, served from the dashboard directory
