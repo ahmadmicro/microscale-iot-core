@@ -1,0 +1,18 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: sonoff.zbmini           # Sonoff ZBMINI (ZBMINI01) behind-the-switch relay module
+class: Cat2                    # mains actuator, hidden install (wall box / fixture)
+interface: zigbee              # Zigbee 3.0, natively supported by Zigbee2MQTT
+metrics: [device.relay]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no eWeLink hub or cloud.
+benchmark: TBD (control latency; relay rating vs load — 10 A resistive claim)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - REQUIRES NEUTRAL in the wall box. Wires behind an existing switch, so the wall
+    keeps its normal switch (S1/S2 input) and gains remote control — no visible change,
+    installation cost in the engagement quote.
+  - Mains-powered Zigbee ROUTER — cheap mesh reinforcement wherever one is fitted.
+  - No power metering — pair with an upstream Tongou DIN unit when the circuit needs
+    consumption data. Avoid the ZBMINI-L/L2 (no-neutral) variants for mesh-critical
+    spots: they are end devices, not routers.

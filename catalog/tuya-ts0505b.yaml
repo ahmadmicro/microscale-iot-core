@@ -1,0 +1,21 @@
+# CANDIDATE — gate passes stock via Zigbee2MQTT; bench-eval pending.
+model: tuya.ts0505b            # Tuya Zigbee RGB+CCT bulb family (many brandings: Moes,
+aliases: [moes-rgb-bulb, lonsonho-rgb-bulb]   # Lonsonho, generic AliExpress E27/B22)
+class: Cat2                    # mains light endpoint
+interface: zigbee              # Zigbee 3.0, natively supported by Zigbee2MQTT
+metrics: [device.relay, light.brightness, light.color_temp, light.color]
+gate:
+  stock: PASS — fully local through Zigbee2MQTT; no Tuya hub or cloud.
+benchmark: TBD (lumen claim vs lux meter; color-temp accuracy; command latency)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay + light)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - TS0505B is the Tuya module id, not a brand — one catalog record covers every bulb
+    reporting that model to Z2M. Record the actual branding per procurement batch.
+  - Bridge maps brightness (0-254 ↔ %) and color_temp (mireds ↔ Kelvin) both ways;
+    color is WRITE-ONLY as rgb-hex in bridge 0.1 (Z2M reports xy coordinates back —
+    reverse conversion deferred until a dashboard card needs it).
+  - Mains-powered router while switched on — but occupants switching the wall switch
+    off drops it from the mesh; don't rely on bulbs as routers in practice.
+  - Business angle: RGB bulbs are demo-friendly (instant visible control on a client's
+    phone) — good for the sales conversation even where the engagement is metering.

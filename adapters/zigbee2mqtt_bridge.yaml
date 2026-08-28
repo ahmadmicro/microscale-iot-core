@@ -38,6 +38,21 @@ devices:
     source: grid
     relay: true
 
+  # Sonoff ZBMINI behind-the-switch relay module (requires neutral; acts as a router).
+  pump-house:
+    name: zbmini_pump
+    model: sonoff.zbmini
+    source: grid
+    relay: true
+
+  # Zigbee RGB bulb (Tuya TS0505B family — covers many brandings). `light` unlocks
+  # brightness/color_temp readings and brightness/color_temp/color writes.
+  shop-sign:
+    name: bulb_shop_sign
+    model: tuya.ts0505b
+    relay: true
+    light: true
+
   # Tongou DIN-rail 63 A switch/breaker with metering ("starblock" terminal block).
   # In Z2M device options set measurement_poll_interval: 10 — the default 60 s poll is
   # too slow for live cards.

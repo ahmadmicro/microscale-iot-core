@@ -62,6 +62,7 @@ class Device:
         self.source = cfg.get("source")
         self.relay = bool(cfg.get("relay", False))
         self.power_metering = bool(cfg.get("power_metering", False))
+        self.light = bool(cfg.get("light", False))
 
 
 class Zigbee2MqttBridge:
@@ -99,6 +100,8 @@ class Zigbee2MqttBridge:
             points += [m for m, _ in ELECTRICAL_MAP.values()]
         if d.relay:
             points.append("device.relay")
+        if d.light:
+            points += ["light.brightness", "light.color_temp", "light.color"]
         return {
             "schema_version": schema.SCHEMA_VERSION,
             "device_id": d.device_id,
@@ -124,8 +127,10 @@ class Zigbee2MqttBridge:
             # exact subscriptions (not a wildcard) so our own /set writes don't loop back
             client.subscribe(f"{self.z2m_base}/{d.name}", qos=1)
             client.subscribe(f"{self.z2m_base}/{d.name}/availability", qos=1)
-            if d.relay:
-                client.subscribe(f"{self._base(d)}/main/device.relay/cmd", qos=1)
+            writable = (["device.relay"] if d.relay else []) + (
+                ["light.brightness", "light.color_temp", "light.color"] if d.light else [])
+            for metric in writable:
+                client.subscribe(f"{self._base(d)}/main/{metric}/cmd", qos=1)
 
     # ---- message routing ----
     def _on_message(self, client, userdata, msg):  # noqa: ANN001
@@ -173,20 +178,42 @@ class Zigbee2MqttBridge:
         if d.relay and isinstance(doc.get("state"), str):
             self._publish_reading(d, "device.relay",
                                   "on" if doc["state"].upper() == "ON" else "off")
+        if d.light:
+            if isinstance(doc.get("brightness"), (int, float)):
+                self._publish_reading(d, "light.brightness",
+                                      round(doc["brightness"] / 254 * 100, 1))
+            if isinstance(doc.get("color_temp"), (int, float)) and doc["color_temp"] > 0:
+                # Z2M reports mireds; canonical is Kelvin
+                self._publish_reading(d, "light.color_temp",
+                                      round(1_000_000 / doc["color_temp"]))
+            # color is write-only in 0.1: Z2M reports xy/hs coordinates, and converting
+            # them back to an rgb-hex reading isn't worth the code until a dashboard needs it
 
     def _handle_cmd(self, parts: list[str], payload: str) -> None:
-        # ms/<site>/<device>/<channel>/device.relay/cmd
+        # ms/<site>/<device>/<channel>/<metric>/cmd
         device_id, metric = parts[2], parts[4]
         d = self._by_id.get(device_id)
-        if d is None or not d.relay or metric != "device.relay":
+        if d is None:
             return
         try:
             value = json.loads(payload)
         except json.JSONDecodeError:
             value = payload.strip()
-        on = value in ("on", "ON", 1, True, "1")
-        self._client.publish(f"{self.z2m_base}/{d.name}/set",
-                             json.dumps({"state": "ON" if on else "OFF"}), qos=1)
+        try:
+            if metric == "device.relay" and d.relay:
+                on = value in ("on", "ON", 1, True, "1")
+                doc: dict[str, Any] = {"state": "ON" if on else "OFF"}
+            elif metric == "light.brightness" and d.light:
+                doc = {"brightness": max(0, min(254, round(float(value) * 254 / 100)))}
+            elif metric == "light.color_temp" and d.light:
+                doc = {"color_temp": round(1_000_000 / float(value))}  # Kelvin -> mireds
+            elif metric == "light.color" and d.light:
+                doc = {"color": {"hex": str(value)}}
+            else:
+                return
+        except (TypeError, ValueError, ZeroDivisionError):
+            return
+        self._client.publish(f"{self.z2m_base}/{d.name}/set", json.dumps(doc), qos=1)
 
 
 def main() -> None:

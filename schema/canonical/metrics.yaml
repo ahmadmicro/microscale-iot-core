@@ -46,6 +46,11 @@ metrics:
   flow.volume_total:         { unit: m3,    kind: counter, category: flow }
   flow.mass:                 { unit: kg/h,  kind: gauge,   category: flow }         # steam, compressed air
 
+  # ── Lighting (control-plane, all writable) ─────────────────────────────────
+  light.brightness:          { unit: "%",   kind: gauge, category: light, range: [0, 100], writable: true }
+  light.color_temp:          { unit: K,     kind: gauge, category: light, writable: true }
+  light.color:               { unit: rgb-hex, kind: state, category: light, writable: true }  # "#rrggbb"
+
   # ── Production / process ───────────────────────────────────────────────────
   production.count:          { unit: "1",   kind: counter, category: production }
   production.rate:           { unit: /h,    kind: gauge,   category: production }
