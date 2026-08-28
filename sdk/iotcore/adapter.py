@@ -32,6 +32,8 @@ class Point:
     channel: str = "main"
     source: str | None = None  # per-point override of the device source tag
     medium: str | None = None  # per-point override of the device medium tag (flow.* metrics)
+    extra: dict[str, Any] = field(default_factory=dict)  # transport metadata
+    # (register=, scale=, type=...) consumed by declarative bases like ModbusAdapter
 
 
 @dataclass
@@ -42,12 +44,12 @@ class Command:
 
 
 def point(metric: str, *, channel: str = "main", source: str | None = None,
-          medium: str | None = None, **_ignored: Any) -> Point:
-    """Declare an output point. Extra kwargs (register=, topic=, scale=...) are accepted and
-    ignored here so declarative transport adapters can reuse the same call site."""
+          medium: str | None = None, **extra: Any) -> Point:
+    """Declare an output point. Extra kwargs (register=, topic=, scale=...) are kept on
+    Point.extra for declarative transport adapters (e.g. ModbusAdapter) to consume."""
     if not schema.is_metric(metric):
         raise schema.SchemaError(f"unknown metric {metric!r}")
-    return Point(metric=metric, channel=channel, source=source, medium=medium)
+    return Point(metric=metric, channel=channel, source=source, medium=medium, extra=extra)
 
 
 def command(metric: str, *, channel: str = "main", **_ignored: Any) -> Command:
@@ -157,10 +159,13 @@ class Adapter:
         self.publish(metric, self.on_command_state(metric, value), channel=channel)
 
     def _tick(self) -> None:
+        # read() may key by metric, or by (metric, channel) for multi-channel devices
+        # (e.g. a 3-phase meter with electrical.voltage on L1/L2/L3)
         readings = self.read() or {}
         for p in self.points:
-            if p.metric in readings:
-                self.publish(p.metric, readings[p.metric], channel=p.channel,
+            value = readings.get((p.metric, p.channel), readings.get(p.metric))
+            if value is not None:
+                self.publish(p.metric, value, channel=p.channel,
                              source=p.source or self.source,
                              medium=p.medium or self.medium)
 

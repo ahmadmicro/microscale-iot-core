@@ -24,8 +24,11 @@ Turn the simulator into real hardware and harden the IP.
       *Bridge built and verified round-trip against simulated Z2M (`adapters/zigbee2mqtt_bridge.py`),
       with Aqara sensor/plug/switch profiles and new canonical metrics (battery, pressure,
       illuminance, contact, leak); remaining: pair real hardware via a coordinator.*
-- [ ] **One Modbus meter adapter** (typed, e.g. Orno WE-516) — covers electricity sub-metering
+- [x] **One Modbus meter adapter** (typed, e.g. Orno WE-516) — covers electricity sub-metering
       (SBE) and DIN-rail Cat-3. See `design/adapters/example_orno_we516.py`.
+      *Built as designed: declarative `ModbusAdapter` base in the SDK + `adapters/orno_we516.py`
+      register declaration; verified against a register-accurate Modbus TCP simulator with
+      per-phase L1/L2/L3 channels; remaining: verify register map on a physical meter.*
 - [ ] **Freeze canonical schema v1.0** + add JSON-Schema validation of envelopes/descriptors in CI.
 - [ ] **First catalog entries**: bench each device vs a reference meter → `catalog/<model>.yaml`
       (measured accuracy, procurement, gate results). This is the compounding deposit.

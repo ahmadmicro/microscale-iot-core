@@ -1,0 +1,25 @@
+# CANDIDATE — typed adapter built and verified against a register-accurate simulator;
+# bench-eval against a real meter pending.
+model: orno.we-516             # Orno OR-WE-516 3-phase DIN-rail energy meter, 80 A, RS-485
+class: Cat3                    # DIN-rail sub-metering (the SBE path)
+interface: modbus              # Modbus RTU, FC03 holding registers, FP32 big-endian
+metrics: [electrical.voltage (L1/L2/L3), electrical.current (L1/L2/L3),
+          electrical.active_power (total + L1/L2/L3), electrical.reactive_power,
+          electrical.apparent_power, electrical.power_factor, electrical.frequency,
+          electrical.energy]
+gate:
+  stock: PASS — plain Modbus RTU on RS-485; no cloud, no vendor software required.
+benchmark: TBD (accuracy class B nameplate; measure vs reference — SBE Cat-3 bench protocol)
+adapter: adapters/orno_we516.py (typed, on the iotcore ModbusAdapter base)
+procurement: { supplier: TBD (EU-common, TME stocks it), landed_unit_cost: TBD,
+               certification: MID class B; SONCAP TBD }
+notes: |
+  - Serial defaults from the Orno manual: slave ID 1, 9600 baud, 8E1. Register map
+    cross-checked against the ESPHome OR-WE-517 device page and Loxone library
+    (voltages 0x0E+, currents 0x16+, powers 0x1C+ in kW, energy 0x100 in kWh).
+    VERIFY against the physical meter on first bench — map is community-sourced.
+  - Adapter supports direct RTU (--serial /dev/ttyUSB0) and RS-485-to-Ethernet
+    gateways (--tcp host:port) — the gateway path suits multi-meter DIN cabinets.
+  - Per-phase readings publish on channels L1/L2/L3, totals on main — dashboard can
+    bind phase-imbalance views without schema changes.
+  - WE-517 is the same map + 4-tariff registers; the adapter should work unchanged.
