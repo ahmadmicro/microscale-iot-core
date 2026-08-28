@@ -16,6 +16,7 @@ _REGISTRY_PATH = Path(__file__).resolve().parents[2] / "schema" / "canonical" / 
 
 _VALID_QUALITY = {"good", "stale", "estimated", "bad", "simulated"}
 _VALID_SOURCE = {"grid", "generator", "solar", "battery", "unknown"}
+_VALID_MEDIUM = {"water", "gas", "steam", "air"}
 
 
 class SchemaError(ValueError):
@@ -63,6 +64,7 @@ def build_envelope(
     t_ms: int | None = None,
     quality: str = "good",
     source: str | None = None,
+    medium: str | None = None,
     seq: int | None = None,
     include_unit: bool = True,
 ) -> dict[str, Any]:
@@ -72,6 +74,8 @@ def build_envelope(
         raise SchemaError(f"invalid quality {quality!r}")
     if source is not None and source not in _VALID_SOURCE:
         raise SchemaError(f"invalid source {source!r}")
+    if medium is not None and medium not in _VALID_MEDIUM:
+        raise SchemaError(f"invalid medium {medium!r}")
 
     env: dict[str, Any] = {
         "t": t_ms if t_ms is not None else int(time.time() * 1000),
@@ -83,6 +87,8 @@ def build_envelope(
         env["q"] = quality
     if source is not None:
         env["src"] = source
+    if medium is not None:
+        env["medium"] = medium
     if seq is not None:
         env["seq"] = seq
     return env

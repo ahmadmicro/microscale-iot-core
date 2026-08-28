@@ -30,6 +30,11 @@
       "enum": ["grid", "generator", "solar", "battery", "unknown"],
       "description": "Energy source for carbon attribution. grid → Scope 2; generator → Scope 1. Omit for non-energy metrics."
     },
+    "medium": {
+      "type": "string",
+      "enum": ["water", "gas", "steam", "air"],
+      "description": "Fluid measured by a flow.* metric. A flow reading is meaningless for cost/carbon attribution without knowing which utility it is, so this SHOULD be sent on all flow.* readings. Omit for non-flow metrics. (Same role for flow that `src` plays for energy.)"
+    },
     "seq": {
       "type": "integer",
       "description": "Monotonic per-(device,channel,metric) sequence number. Lets consumers detect gaps and lets the edge replay buffered readings in order after reconnect."

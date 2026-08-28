@@ -16,7 +16,8 @@ translator is the *adapter/bridge*, and it is where Microscale's value lives.
 ```
   DEVICE (native format)  ──►  ADAPTER / BRIDGE  ──►  canonical MQTT topics  ──►  DASHBOARD
   Tuya DPIDs / Tasmota          normalize to             ms/site/dev/ch/metric      (binds to
-  JSON / Modbus registers       canonical schema         {v, u, src, q, seq}         canonical only)
+  JSON / Modbus registers       canonical schema         {v, u, src, medium,         canonical only)
+                                                          q, seq}
 ```
 
 **Can the dashboard connect to a Tuya device directly? No — and not only because of the schema.**

@@ -31,6 +31,7 @@ class Point:
     metric: str
     channel: str = "main"
     source: str | None = None  # per-point override of the device source tag
+    medium: str | None = None  # per-point override of the device medium tag (flow.* metrics)
 
 
 @dataclass
@@ -40,12 +41,13 @@ class Command:
     handler: Callable[[Any], None] | None = None
 
 
-def point(metric: str, *, channel: str = "main", source: str | None = None, **_ignored: Any) -> Point:
+def point(metric: str, *, channel: str = "main", source: str | None = None,
+          medium: str | None = None, **_ignored: Any) -> Point:
     """Declare an output point. Extra kwargs (register=, topic=, scale=...) are accepted and
     ignored here so declarative transport adapters can reuse the same call site."""
     if not schema.is_metric(metric):
         raise schema.SchemaError(f"unknown metric {metric!r}")
-    return Point(metric=metric, channel=channel, source=source)
+    return Point(metric=metric, channel=channel, source=source, medium=medium)
 
 
 def command(metric: str, *, channel: str = "main", **_ignored: Any) -> Command:
@@ -61,6 +63,7 @@ class Adapter:
     model: str = "generic.device"
     poll_interval: float = 5.0
     source: str | None = None
+    medium: str | None = None
     accuracy_class: str | None = None
     points: list[Point] = []
     commands: list[Command] = []
@@ -158,16 +161,19 @@ class Adapter:
         for p in self.points:
             if p.metric in readings:
                 self.publish(p.metric, readings[p.metric], channel=p.channel,
-                             source=p.source or self.source)
+                             source=p.source or self.source,
+                             medium=p.medium or self.medium)
 
     # ---- publishing ----
     def publish(self, metric: str, value: Any, *, channel: str = "main",
-                source: str | None = None, quality: str = "good") -> None:
+                source: str | None = None, medium: str | None = None,
+                quality: str = "good") -> None:
         key = (channel, metric)
         self._seq[key] = self._seq.get(key, 0) + 1
         env = schema.build_envelope(
             metric, value, quality=quality,
             source=source if source is not None else self.source,
+            medium=medium if medium is not None else self.medium,
             seq=self._seq[key],
         )
         topic = self._topic_point(metric, channel)

@@ -36,7 +36,9 @@ metrics:
   genset.state:              { unit: enum,  kind: state,   category: genset, enum: [off, running, fault] }
 
   # ── Flow (water / gas / steam / compressed air) ────────────────────────────
-  flow.volumetric:           { unit: m3/h,  kind: gauge,   category: flow }
+  # Flow readings MUST carry a `medium` dimension in the envelope (water|gas|steam|air) —
+  # a bare flow value can't be attributed to a utility for cost/carbon. See note below.
+  flow.volumetric:           { unit: m3/h,  kind: gauge,   category: flow }         # water, gas
   flow.volume_total:         { unit: m3,    kind: counter, category: flow }
   flow.mass:                 { unit: kg/h,  kind: gauge,   category: flow }         # steam, compressed air
 
@@ -52,3 +54,6 @@ metrics:
 # Source tags (for carbon attribution) are NOT metrics — they are a dimension carried on each
 # reading (`src` in the envelope): grid | generator | solar | battery | unknown.
 # grid electricity → Scope 2; generator fuel/energy → Scope 1.
+#
+# Likewise `medium` (water | gas | steam | air) is a dimension on flow.* readings, not a metric —
+# it says which utility a flow value measures, so cost/carbon can be attributed per utility.

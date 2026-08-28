@@ -7,20 +7,20 @@
     {
       "name": "Overview",
       "cards": [
-        { "type": "metric", "title": "Total Load", "bind": "acme-lagos/main-meter/main/electrical.active_power", "format": "power", "history": "60" },
-        { "type": "gauge", "title": "Voltage", "bind": "acme-lagos/main-meter/main/electrical.voltage", "min": 200, "max": 250, "warn": [210, 245] },
-        { "type": "source-split", "title": "Power source", "bind": "acme-lagos/main-meter/main/electrical.active_power" },
-        { "type": "switch", "title": "Water Heater", "bind": "acme-lagos/plug-01/main/device.relay", "write": "acme-lagos/plug-01/main/device.relay/cmd" },
-        { "type": "metric", "title": "Diesel Tank", "bind": "acme-lagos/tank-01/main/fuel.level_fraction", "format": "percent", "alert": { "below": 0.15 } }
+        { "type": "metric", "title": "Total Load", "bind": "ms/acme-lagos/main-meter/main/electrical.active_power", "format": "power", "history": "60" },
+        { "type": "gauge", "title": "Voltage", "bind": "ms/acme-lagos/main-meter/main/electrical.voltage", "min": 200, "max": 250, "warn": [210, 245] },
+        { "type": "source-split", "title": "Power source", "bind": "ms/acme-lagos/main-meter/main/electrical.active_power" },
+        { "type": "switch", "title": "Water Heater", "bind": "ms/acme-lagos/plug-01/main/device.relay", "write": "ms/acme-lagos/plug-01/main/device.relay/cmd" },
+        { "type": "metric", "title": "Diesel Tank", "bind": "ms/acme-lagos/tank-01/main/fuel.level_fraction", "format": "percent", "alert": { "below": 0.15 } }
       ]
     },
     {
       "name": "Power",
       "cards": [
-        { "type": "metric", "title": "Frequency", "bind": "acme-lagos/main-meter/main/electrical.frequency", "format": "number", "unit": "Hz" },
-        { "type": "metric", "title": "Power Factor", "bind": "acme-lagos/main-meter/main/electrical.power_factor", "format": "number" },
-        { "type": "metric", "title": "Energy (import)", "bind": "acme-lagos/main-meter/main/electrical.energy", "format": "energy" },
-        { "type": "metric", "title": "Plug draw", "bind": "acme-lagos/plug-01/main/electrical.active_power", "format": "power" }
+        { "type": "metric", "title": "Frequency", "bind": "ms/acme-lagos/main-meter/main/electrical.frequency", "format": "number", "unit": "Hz" },
+        { "type": "metric", "title": "Power Factor", "bind": "ms/acme-lagos/main-meter/main/electrical.power_factor", "format": "number" },
+        { "type": "metric", "title": "Energy (import)", "bind": "ms/acme-lagos/main-meter/main/electrical.energy", "format": "energy" },
+        { "type": "metric", "title": "Plug draw", "bind": "ms/acme-lagos/plug-01/main/electrical.active_power", "format": "power" }
       ]
     }
   ]
