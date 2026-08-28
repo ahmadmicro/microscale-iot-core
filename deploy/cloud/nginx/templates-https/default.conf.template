@@ -1,0 +1,38 @@
+# PRODUCTION mode — TLS everywhere. Activated by pointing the compose nginx volume at
+# this directory once the certificate exists (docs/cloud-hosting.md, step 4).
+server {
+    listen 80;
+    server_name ${DOMAIN};
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    location / { return 301 https://$host$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    # per-site dashboards:  https://${DOMAIN}/s/<site>/
+    location ~ ^/s/(?<site>[a-z0-9-]+)/(?<file>.*)$ {
+        root /srv;
+        try_files /sites/$site/$file /pwa/$file /pwa/index.html;
+    }
+    location /pwa/ { root /srv; }   # internal redirect target for the shell fallback
+
+    # wss://${DOMAIN}/mqtt  (dashboard broker URL)
+    location /mqtt {
+        proxy_pass http://emqx:8083/mqtt;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 120s;      # > MQTT keepalive
+    }
+
+    # https://${DOMAIN}/api/…  (historian; bearer auth passes through)
+    location /api/ {
+        proxy_pass http://api:8090/;
+        proxy_set_header Authorization $http_authorization;
+    }
+}

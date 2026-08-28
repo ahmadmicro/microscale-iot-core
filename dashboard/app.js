@@ -182,7 +182,7 @@
         "&channel=" + encodeURIComponent(def.channel || "main") +
         "&bucket=" + encodeURIComponent(def.bucket || "15 minutes") +
         "&start=" + start.toISOString() + "&end=" + end.toISOString();
-      fetch(spec.api + "/" + spec.site + "/readings?" + q)
+      fetch(spec.api + "/" + spec.site + "/readings?" + q, { headers: apiHeaders() })
         .then(function (r) { return r.json(); })
         .then(function (d) { draw(d.rows || []); })
         .catch(function () { meta.textContent = "history unavailable"; });
@@ -266,8 +266,20 @@
     paint();
   }
 
+  // credential for secured brokers/APIs (EMQX JWT): ?token=... once, then remembered
+  var token = null;
+  function loadToken() {
+    var q = new URLSearchParams(location.search).get("token");
+    try {
+      if (q) localStorage.setItem("ms-token", q);
+      token = q || localStorage.getItem("ms-token");
+    } catch (e) { token = q; }
+  }
+  function apiHeaders() { return token ? { "Authorization": "Bearer " + token } : {}; }
+
   fetch("dashboard.json").then(function (r) { return r.json(); }).then(function (s) {
     spec = s;
+    loadToken();
     role = new URLSearchParams(location.search).get("role") || spec.defaultRole || "operator";
     applyTheme(spec.theme);
     document.getElementById("site-title").textContent = spec.title;
@@ -281,7 +293,9 @@
     });
     renderPage(pageIdx[0] != null ? pageIdx[0] : 0);
 
-    client = mqtt.connect(spec.broker, { reconnectPeriod: 2000 });
+    var opts = { reconnectPeriod: 2000 };
+    if (token) { opts.username = "dashboard"; opts.password = token; }
+    client = mqtt.connect(spec.broker, opts);
     client.on("connect", function () { conn("on", "live"); subscribeAll(); });
     client.on("reconnect", function () { conn("off", "reconnecting…"); });
     client.on("close", function () { conn("off", "offline"); });

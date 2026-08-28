@@ -12,6 +12,7 @@ Roles:
   edge      — an edge-gateway bridge process: full ms/<site>/# plus the native device
               namespaces it translates (tele/stat/cmnd for Tasmota, zigbee2mqtt/#).
   dashboard — a viewer: reads the whole site, writes only /cmd topics.
+  service   — platform-internal (the historian sink): reads every site, writes nothing.
 
 Usage:
   python tools/mint_token.py device    --site acme-lagos --device plug-01 --secret $S
@@ -46,13 +47,16 @@ def acl_for(role: str, site: str, device: str | None) -> dict:
             "pub": [f"ms/{site}/+/+/+/cmd"],
             "sub": [f"ms/{site}/#"],
         }
+    if role == "service":
+        # platform-internal consumers (the historian sink): read EVERY site, write nothing
+        return {"pub": [], "sub": ["ms/#"]}
     raise SystemExit(f"unknown role {role!r}")
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Mint an EMQX JWT credential")
-    ap.add_argument("role", choices=["device", "edge", "dashboard"])
-    ap.add_argument("--site", required=True)
+    ap.add_argument("role", choices=["device", "edge", "dashboard", "service"])
+    ap.add_argument("--site", default="-", help="site id (not used by the service role)")
     ap.add_argument("--device", help="device_id (device role only)")
     ap.add_argument("--secret", required=True, help="the broker's JWT HMAC secret")
     ap.add_argument("--days", type=int, default=365, help="token lifetime (default 365)")

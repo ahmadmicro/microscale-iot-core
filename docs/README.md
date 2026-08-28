@@ -7,6 +7,7 @@ Pick the guide for what you're doing. Each assumes a different level of expertis
 | **Use the dashboard** on my phone — read the cards, get alerts, control a switch | [User guide](user-guide.md) | None |
 | **Commission a site** — set up the gateway box, connect plugs/sensors/meters, hand over a branded dashboard | [Installer guide](installer-guide.md) | Field tech: comfortable with a terminal, SSH, and wiring |
 | **Run the platform** — brokers, credentials, the data store, upgrades | [Operations guide](operations-guide.md) | Sysadmin: Docker, DNS/TLS, secrets |
+| **Host it as a service** — stand up the multi-tenant cloud, onboard clients | [Cloud hosting guide](cloud-hosting.md) | Sysadmin: a VPS, DNS, secrets |
 | **Build on the platform** — write an adapter for a new device, or consume the data API | [Developer guide](developer-guide.md) | Software developer: Python, MQTT, HTTP |
 | **Build a device** — ESP32 firmware that speaks the contract natively (path C) | [ESP32 firmware guide](firmware-esp32.md) | Embedded developer: MicroPython/C, ESP32 |
 

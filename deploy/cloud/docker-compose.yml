@@ -1,0 +1,93 @@
+# The Microscale IoT cloud service — the full hosted stack on one box.
+#
+#   nginx (TLS)  ─┬─  /s/<site>/…  per-client dashboards (PWA)
+#                 ├─  /mqtt        MQTT-over-WebSocket → EMQX
+#                 └─  /api/…       historian read API
+#   EMQX (JWT + per-client topic ACLs)  ←  edge gateways / devices (1883: VPN/LAN only)
+#   TimescaleDB  ←  sink (ms/# → history)
+#
+# Bring-up, TLS, and the client-onboarding runbook: docs/cloud-hosting.md.
+# Secrets come from .env (copy .env.example) — never commit it.
+services:
+  emqx:
+    image: emqx/emqx:5.8
+    container_name: ms_emqx
+    ports:
+      - "${MQTT_PORT:-1883}:1883"    # edge/devices — firewall to VPN/known IPs, never public
+      - "127.0.0.1:18083:18083"      # admin UI — localhost only, reach via SSH tunnel
+    environment:
+      EMQX_AUTHENTICATION__1__MECHANISM: jwt
+      EMQX_AUTHENTICATION__1__FROM: password
+      EMQX_AUTHENTICATION__1__USE_JWKS: "false"
+      EMQX_AUTHENTICATION__1__ALGORITHM: hmac-based
+      EMQX_AUTHENTICATION__1__SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      EMQX_AUTHENTICATION__1__SECRET_BASE64_ENCODED: "false"
+      EMQX_AUTHENTICATION__1__ACL_CLAIM_NAME: acl
+      EMQX_AUTHORIZATION__NO_MATCH: deny
+      EMQX_AUTHORIZATION__DENY_ACTION: ignore
+    volumes:
+      - emqx-data:/opt/emqx/data
+    restart: unless-stopped
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: ms_tsdb
+    environment:
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?set PG_PASSWORD in .env}
+      POSTGRES_DB: iotcore
+    volumes:
+      - tsdb-data:/var/lib/postgresql/data
+      - ../../historian/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+    restart: unless-stopped
+
+  sink:
+    build: { context: ../.., dockerfile: historian/Dockerfile }
+    command: ["python", "-m", "historian.sink"]
+    environment:
+      PG_DSN: postgresql://postgres:${PG_PASSWORD}@timescaledb:5432/iotcore
+      MQTT_HOST: emqx
+      MQTT_USERNAME: sink
+      MQTT_PASSWORD: ${SINK_TOKEN:?mint an edge token for the sink (see docs/cloud-hosting.md)}
+    depends_on: [emqx, timescaledb]
+    restart: unless-stopped
+
+  api:
+    build: { context: ../.., dockerfile: historian/Dockerfile }
+    environment:
+      PG_DSN: postgresql://postgres:${PG_PASSWORD}@timescaledb:5432/iotcore
+      API_TOKEN: ${API_TOKEN:-}
+      JWT_SECRET: ${JWT_SECRET}     # lets site-scoped dashboard JWTs read the API too
+    depends_on: [timescaledb]
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: ms_nginx
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro     # http.conf.template until certs exist,
+                                                      # then https.conf.template — see the guide
+      - ../../dashboard:/srv/pwa:ro                   # shared PWA shell (app.js, style.css, …)
+      - ./dashboards:/srv/sites:ro                    # per-site built specs (dashboard.json)
+      - certbot-webroot:/var/www/certbot
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
+    depends_on: [emqx, api]
+    restart: unless-stopped
+
+  # one-shot certificate issuance:  docker compose run --rm certbot
+  certbot:
+    image: certbot/certbot
+    profiles: [certs]
+    volumes:
+      - certbot-webroot:/var/www/certbot
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt
+    command: certonly --webroot -w /var/www/certbot -d ${DOMAIN} --agree-tos -m ${ACME_EMAIL:-}
+
+volumes:
+  emqx-data:
+  tsdb-data:
+  certbot-webroot:

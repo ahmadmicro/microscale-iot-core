@@ -49,7 +49,13 @@ def platform(request):
     with sink.conn.cursor() as cur:
         cur.execute("DELETE FROM readings WHERE site = %s", (SITE,))
         cur.execute("DELETE FROM devices WHERE site = %s", (SITE,))
+    subscribed = threading.Event()
+    _orig = sink.client.on_connect
+    sink.client.on_connect = lambda c, u, f, rc: (_orig(c, u, f, rc), subscribed.set())
     threading.Thread(target=sink.run, daemon=True).start()
+    # the test's publishes are NOT retained — wait until the sink is actually subscribed,
+    # or they are delivered to nobody and the assertions race
+    assert subscribed.wait(timeout=10), "sink never connected to the broker"
 
     pub = mqtt.Client(client_id=f"hist-pub-{uuid.uuid4().hex[:6]}")
     pub.connect("localhost", 1883)

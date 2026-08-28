@@ -14,6 +14,7 @@ Three devices matching the two live engagements:
 from __future__ import annotations
 
 import math
+import os
 import sys
 import threading
 import time
@@ -23,8 +24,11 @@ sys.path.insert(0, "sdk")
 
 from iotcore import Adapter, command, point  # noqa: E402
 
-SITE = "acme-lagos"
-HOST = "localhost"
+SITE = os.environ.get("SITE", "acme-lagos")
+HOST = os.environ.get("MQTT_HOST", "localhost")
+PORT = int(os.environ.get("MQTT_PORT", "1883"))
+USERNAME = os.environ.get("MQTT_USERNAME")
+PASSWORD = os.environ.get("MQTT_PASSWORD")  # EMQX edge/device JWT
 
 
 def _t() -> float:
@@ -119,10 +123,12 @@ class DieselTank(Adapter):
 
 
 def main() -> None:
+    kw = {"site": SITE, "host": HOST, "port": PORT,
+          "username": USERNAME, "password": PASSWORD}
     devices = [
-        MainMeter(site=SITE, device_id="main-meter", host=HOST),
-        SmartPlug(site=SITE, device_id="plug-01", host=HOST),
-        DieselTank(site=SITE, device_id="tank-01", host=HOST),
+        MainMeter(device_id="main-meter", **kw),
+        SmartPlug(device_id="plug-01", **kw),
+        DieselTank(device_id="tank-01", **kw),
     ]
     threads = [threading.Thread(target=d.run, daemon=True) for d in devices]
     for th in threads:

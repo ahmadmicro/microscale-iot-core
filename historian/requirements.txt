@@ -2,3 +2,4 @@
 psycopg[binary]>=3.1
 fastapi>=0.110
 uvicorn>=0.29
+PyJWT>=2.8            # accept broker JWTs on the read API (site-scoped)

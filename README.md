@@ -15,7 +15,9 @@ The `dashboard/` may later be split out under an open licence as a differentiato
 **[docs/](docs/README.md) — guides by audience:** [using the dashboard](docs/user-guide.md) (no
 expertise) · [commissioning a site](docs/installer-guide.md) (field tech) ·
 [running the platform](docs/operations-guide.md) (sysadmin) ·
-[building on it](docs/developer-guide.md) (developer). Background:
+[hosting it as a cloud service](docs/cloud-hosting.md) (sysadmin) ·
+[building on it](docs/developer-guide.md) (developer) ·
+[ESP32 firmware](docs/firmware-esp32.md) (embedded). Background:
 [how real devices connect](docs/device-integration.md) · [OTA design](docs/ota.md) ·
 [ROADMAP](ROADMAP.md).
 
@@ -28,8 +30,9 @@ adapters/             simulator · Tasmota bridge · Zigbee2MQTT bridge · Orno 
 catalog/              qualified device catalog — one record per benched model (gate, quirks, sourcing)
 dashboard/            open, mobile-first PWA — validated declarative spec, live cards + history charts
 historian/            data platform: MQTT→TimescaleDB sink + read API with carbon rollups
-deploy/               dev Mosquitto · production EMQX (JWT+ACL) · edge-gateway packaging · historian
-tools/                dashboard build/validate/theming · EMQX JWT minting
+firmware/micropython/ path-C device firmware: the canonical contract on ESP32 (+ example)
+deploy/               dev Mosquitto · EMQX · edge gateway · historian · cloud/ (the hosted service)
+tools/                dashboard build/validate/theming · JWT minting · site onboarding
 tests/                schema contract + end-to-end suites for every adapter family (CI-run)
 ```
 

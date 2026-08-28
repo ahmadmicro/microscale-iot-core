@@ -1,0 +1,32 @@
+# BOOTSTRAP / LOCAL-EVALUATION mode — plain HTTP.
+# Used (a) before the first certificate exists, to serve the ACME challenge, and
+# (b) to evaluate the full cloud stack on a laptop. Switch to https.conf.template
+# for production — see docs/cloud-hosting.md.
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+
+    # per-site dashboards:  /s/<site>/  → built spec, falling back to the shared PWA shell
+    location ~ ^/s/(?<site>[a-z0-9-]+)/(?<file>.*)$ {
+        root /srv;
+        try_files /sites/$site/$file /pwa/$file /pwa/index.html;
+    }
+    location /pwa/ { root /srv; }   # internal redirect target for the shell fallback
+
+    # MQTT over WebSocket → EMQX
+    location /mqtt {
+        proxy_pass http://emqx:8083/mqtt;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_read_timeout 120s;
+    }
+
+    # historian read API
+    location /api/ {
+        proxy_pass http://api:8090/;
+        proxy_set_header Authorization $http_authorization;
+    }
+}

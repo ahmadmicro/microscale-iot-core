@@ -43,10 +43,30 @@ def _conn():
         row_factory=dict_row)
 
 
-def auth(authorization: str | None = Header(None)) -> None:
-    token = os.environ.get("API_TOKEN")
-    if token and authorization != f"Bearer {token}":
-        raise HTTPException(status_code=401, detail="bad or missing bearer token")
+def auth(site: str, authorization: str | None = Header(None)) -> None:
+    """Two accepted credentials: the static API_TOKEN, or a broker JWT (signed with
+    JWT_SECRET) whose own ACL covers this site — so one dashboard token opens both the
+    broker and the API, scoped to its site. Both unset = open (dev)."""
+    static = os.environ.get("API_TOKEN")
+    secret = os.environ.get("JWT_SECRET")
+    if not static and not secret:
+        return
+    supplied = authorization[7:] if authorization and authorization.startswith("Bearer ") else None
+    if supplied is None:
+        raise HTTPException(status_code=401, detail="missing bearer token")
+    if static and supplied == static:
+        return
+    if secret:
+        try:
+            import jwt as pyjwt
+            claims = pyjwt.decode(supplied, secret, algorithms=["HS256"])
+        except Exception:
+            raise HTTPException(status_code=401, detail="bad token")
+        subs = (claims.get("acl") or {}).get("sub") or []
+        if any(s == "ms/#" or s.startswith(f"ms/{site}/") for s in subs):
+            return
+        raise HTTPException(status_code=403, detail="token not scoped to this site")
+    raise HTTPException(status_code=401, detail="bad token")
 
 
 def _bucket(bucket: str | None) -> str | None:

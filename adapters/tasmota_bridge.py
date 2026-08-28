@@ -65,6 +65,9 @@ class TasmotaBridge:
         self._by_id = {d.device_id: d for d in self.devices}
         self._seq: dict[tuple[str, str, str], int] = {}
         self._client = mqtt.Client(client_id=f"{self.site}.tasmota-bridge")
+        broker = cfg.get("broker", {})
+        if broker.get("username") or broker.get("password"):
+            self._client.username_pw_set(broker.get("username"), broker.get("password"))
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
 

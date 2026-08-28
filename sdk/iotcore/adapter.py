@@ -74,7 +74,8 @@ class Adapter:
     commands: list[Command] = []
 
     def __init__(self, *, site: str, device_id: str, host: str = "localhost", port: int = 1883,
-                 spool_dir: str | None = None):
+                 spool_dir: str | None = None,
+                 username: str | None = None, password: str | None = None):
         self.site = site
         self.device_id = device_id
         self.host = host
@@ -89,6 +90,8 @@ class Adapter:
             self._spool.parent.mkdir(parents=True, exist_ok=True)
         self._connected = False
         self._client = mqtt.Client(client_id=f"{site}.{device_id}")
+        if username or password:
+            self._client.username_pw_set(username, password)  # EMQX: device JWT as password
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
         self._client.will_set(self._topic_meta_online(), payload="false", qos=1, retain=True)
