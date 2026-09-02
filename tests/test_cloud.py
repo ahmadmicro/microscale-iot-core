@@ -104,3 +104,33 @@ def test_edge_token_cannot_reach_another_sites_topics():
     acl = acl_for("edge", "site-a", None)
     assert all("site-b" not in t for t in acl["pub"] + acl["sub"])
     assert any(t.startswith("ms/site-a/") for t in acl["pub"])
+
+
+def test_deploy_sh_service_token_matches_mint_token():
+    """deploy.sh mints the sink's credential with openssl alone (so a bare box needs no
+    Python). That duplicate implementation must not drift from tools/mint_token.py."""
+    import json
+    import subprocess
+    import base64
+
+    script = ROOT / "deploy" / "cloud" / "deploy.sh"
+    # pull just the two shell functions out of the script and run them
+    src = script.read_text()
+    funcs = []
+    for name in ("b64url", "mint_service_token"):
+        start = src.index(f"\n{name}() ")
+        end = src.index("\n}\n", start) + 3
+        funcs.append(src[start:end])
+    token = subprocess.run(
+        ["bash", "-c", "".join(funcs) + f'\nmint_service_token "{SECRET}"'],
+        capture_output=True, text=True, check=True).stdout.strip()
+
+    # the signature must verify with the same secret EMQX is configured with
+    claims = jwt.decode(token, SECRET, algorithms=["HS256"])
+    # and the ACL must be exactly what the Python minter would have produced
+    assert claims["acl"] == acl_for("service", "-", None)
+    # header must be a plain HS256 JWT
+    head = json.loads(base64.urlsafe_b64decode(token.split(".")[0] + "=="))
+    assert head == {"alg": "HS256", "typ": "JWT"}
+    # a sink credential that expires silently stops ingestion — keep it long-lived
+    assert (claims["exp"] - claims["iat"]) > 5 * 365 * 86400

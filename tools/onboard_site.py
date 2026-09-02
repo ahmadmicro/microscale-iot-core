@@ -40,6 +40,8 @@ def main() -> None:
     ap.add_argument("--spec", type=Path, required=True, help="dashboard authoring YAML")
     ap.add_argument("--theme", type=Path, help="client branding YAML")
     ap.add_argument("--domain", required=True, help="the service domain, e.g. iot.example.com")
+    ap.add_argument("--base-url", help="public base URL if it isn't https://<domain> "
+                                       "(e.g. http://localhost:8880 during local evaluation)")
     ap.add_argument("--secret", default=os.environ.get("JWT_SECRET"),
                     help="broker JWT secret (default: $JWT_SECRET)")
     ap.add_argument("--edge-days", type=int, default=365)
@@ -54,7 +56,7 @@ def main() -> None:
 
     edge = mint("edge", args.site, args.secret, args.edge_days)
     dash = mint("dashboard", args.site, args.secret, args.dash_days)
-    base = f"https://{args.domain}/s/{args.site}/"
+    base = f"{args.base_url or f'https://{args.domain}'}/s/{args.site}/"
 
     print(f"\n=== {args.site} onboarded ===")
     print(f"dashboard built:  {out}")

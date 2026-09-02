@@ -30,55 +30,59 @@ A 2 vCPU / 4 GB VPS handles many sites at typical polling rates; give it disk fo
 (`iot.<yourdomain>`). Open **80/443** publicly. Port **1883** (MQTT for edge gateways) should be
 restricted to your sites' egress IPs or a VPN — never left open to the internet.
 
-## 2. Configure secrets
+## 2. Stand it up
+
+`deploy/cloud/deploy.sh` automates everything below; each command is safe to re-run.
 
 ```bash
 git clone <this repo> && cd microscale-iot-core/deploy/cloud
-cp .env.example .env
+./deploy.sh init --domain iot.example.com --email ops@example.com
+./deploy.sh up
 ```
 
-Fill `.env`:
+`init` writes `.env` (mode 600) with a freshly generated `JWT_SECRET`, `PG_PASSWORD`,
+`API_TOKEN`, and the sink's own `service` credential — it mints that JWT with nothing but
+openssl, so a bare box needs no Python to come up. It **refuses to overwrite an existing
+`.env`**, because replacing `JWT_SECRET` invalidates every credential already issued to
+clients. `up` builds, starts, and waits for `/api/health`.
+
+Copy `.env` into your secret manager now: it is gitignored and nothing else backs it up.
+Losing `JWT_SECRET` means reissuing every client credential.
+
+<details><summary>Doing it by hand instead</summary>
+
+`cp .env.example .env`, then fill `JWT_SECRET` (`openssl rand -hex 32`), `PG_PASSWORD`
+(`openssl rand -hex 24`), and `SINK_TOKEN`
+(`python tools/mint_token.py service --secret "$JWT_SECRET"` — the `service` role reads
+every site and writes nothing). Then `docker compose up -d --build`.
+</details>
+
+## 3. TLS
 
 ```bash
-openssl rand -hex 32     # → JWT_SECRET   (signs every credential — treat as root)
-openssl rand -hex 24     # → PG_PASSWORD
+./deploy.sh tls
 ```
 
-Then mint the platform's own internal credential and paste it into `SINK_TOKEN`:
+Checks that port 80 answers on your domain (certbot validates over the same path), issues the
+certificate, flips `NGINX_TEMPLATE_DIR` to the HTTPS templates, and recreates nginx. Then add
+the renewal to cron:
 
-```bash
-JWT_SECRET=<the secret> python ../../tools/mint_token.py service --secret "$JWT_SECRET"
+```
+0 3 * * *  /path/to/deploy/cloud/deploy.sh renew
 ```
 
-The `service` role reads every site and writes nothing — the least privilege the historian needs.
-Store `.env` in your secret manager; it is gitignored, and losing `JWT_SECRET` means reissuing
-every client credential.
+**Client dashboards must be built with `wss://` and `https://` URLs** — a page served over
+HTTPS cannot open a `ws://` socket. `deploy.sh site` derives the right base URL for you.
 
-## 3. First bring-up (HTTP, for the certificate)
+## 4. Day-to-day commands
 
-```bash
-docker compose up -d --build
-curl http://<your-domain>/api/health          # {"ok":true}
-```
-
-## 4. TLS
-
-```bash
-docker compose run --rm --profile certs certbot          # issues the certificate
-```
-
-Then switch nginx to the TLS config by pointing its template mount at the HTTPS directory in
-`docker-compose.yml`:
-
-```yaml
-      - ./nginx/templates-https:/etc/nginx/templates:ro   # was ./nginx/templates
-```
-
-`docker compose up -d nginx`. Verify `https://<domain>/api/health`, then add a renewal cron:
-`docker compose run --rm --profile certs certbot renew && docker compose restart nginx`.
-
-**Client dashboards must be built with `wss://` and `https://` URLs** — a page served over HTTPS
-cannot open a `ws://` socket.
+| Command | Does |
+|---|---|
+| `./deploy.sh status` | containers, TLS mode, onboarded sites, health, secret fingerprint |
+| `./deploy.sh logs [service]` | tail logs |
+| `./deploy.sh backup` | `pg_dump` the history database into `./backups`, keeping the newest 14 |
+| `./deploy.sh restore FILE` | load a dump into a **new** database (never over the live one) |
+| `./deploy.sh restart [service]`, `./deploy.sh down` | stop/start; `down` keeps data volumes |
 
 ## 5. Onboard a client (repeat per site)
 
@@ -86,9 +90,13 @@ Write the site's dashboard spec (start from `dashboard/site.example.yaml`; set `
 wss://<domain>/mqtt` and `api: https://<domain>/api`), optionally a theme file, then:
 
 ```bash
-JWT_SECRET=<secret> python tools/onboard_site.py acme-lagos \
-    --spec sites/acme-lagos.yaml --theme dashboard/themes/acme.yaml --domain iot.example.com
+cd deploy/cloud
+./deploy.sh site acme-lagos --spec sites/acme-lagos.yaml --theme ../../dashboard/themes/acme.yaml
 ```
+
+(It reads `JWT_SECRET` and `DOMAIN` from `.env`, and passes the secret through the environment
+rather than the command line, where `ps` would expose it. Keep site specs under the repo —
+`deploy/cloud/sites/` is gitignored for that purpose.)
 
 That validates and builds the dashboard into `deploy/cloud/dashboards/acme-lagos/` (live
 immediately at `https://<domain>/s/acme-lagos/`) and prints three things to hand over:
@@ -119,11 +127,15 @@ smoke run:
 
 ## Day 2
 
-- **Backups:** the `tsdb-data` volume is the record — nightly `pg_dump` off-box. Retained broker
-  messages and edge spools are recovery buffers, not archives.
+- **Backups:** `./deploy.sh backup` nightly (cron), and **copy the files off the box** — they
+  land next to the data they protect. Retained broker messages and edge spools are recovery
+  buffers, not archives. Restore with `./deploy.sh restore <file>`: it loads into a new
+  database and prints the rename to promote it. TimescaleDB needs
+  `timescaledb_pre_restore()`/`post_restore()` around the load, which the command handles —
+  a plain `psql < dump.sql` leaves the hypertable catalog inconsistent.
 - **Capacity:** watch database disk first. History grows with points × rate; drop the poll rate or
   add a TimescaleDB retention/compression policy per client tier before you run out.
-- **Upgrades:** `git pull && docker compose up -d --build`. Schema v1.0 is frozen — adding
+- **Upgrades:** `git pull && ./deploy.sh up`. Schema v1.0 is frozen — adding
   metrics is a minor bump, changing units is not allowed.
 - **Health:** each device's retained `$online` flag (Last-Will makes a crash visible), the sink's
   logs, and `curl https://<domain>/api/health`. If a client reports "everything frozen", check
@@ -137,8 +149,14 @@ The whole service runs on a laptop before you rent anything — the compose file
 unencrypted:
 
 ```bash
-cd deploy/cloud && cp .env.example .env     # set DOMAIN=localhost, HTTP_PORT=8880, MQTT_PORT=11883
-docker compose up -d --build
+cd deploy/cloud
+./deploy.sh init --local           # localhost, ports 8880/11883, certs kept out of /etc
+./deploy.sh up
+./deploy.sh site acme-lagos --spec sites/acme-lagos.yaml   # prints the links + edge token
+
+# feed it simulated devices with the edge token it just printed
 MQTT_PORT=11883 MQTT_USERNAME=edge MQTT_PASSWORD=<edge token> python -m adapters.simulator
-# → http://localhost:8880/s/<site>/?token=<dashboard token>
 ```
+
+The printed operator link (`http://localhost:8880/s/acme-lagos/?token=…`) opens the real
+hosted dashboard against the real broker — the same path a client takes.

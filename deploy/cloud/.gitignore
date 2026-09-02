@@ -1,2 +1,23 @@
+# Everything deploy.sh generates on a live box is a secret, per-install, or data.
+# (gitignore has no inline comments — keep patterns on their own lines.)
+
+# secrets: JWT_SECRET, PG_PASSWORD, SINK_TOKEN, API_TOKEN
 .env
+# .env.prod, .env.staging, and any copy of it
+.env.*
+!.env.example
+
+# per-client built dashboards — `deploy.sh site`
 dashboards/
+
+# pg_dump output — `deploy.sh backup`
+backups/
+
+# certificate store (local-evaluation LETSENCRYPT_DIR) and ACME webroot
+letsencrypt/
+certbot/
+
+# client dashboard specs, if you keep them beside the stack
+sites/
+
+*.log

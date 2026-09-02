@@ -69,8 +69,9 @@ services:
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
     volumes:
-      - ./nginx/templates:/etc/nginx/templates:ro     # http.conf.template until certs exist,
-                                                      # then https.conf.template — see the guide
+      # ./nginx/templates (HTTP) until a certificate exists, then ./nginx/templates-https —
+      # `./deploy.sh tls` flips this for you
+      - ${NGINX_TEMPLATE_DIR:-./nginx/templates}:/etc/nginx/templates:ro
       - ../../dashboard:/srv/pwa:ro                   # shared PWA shell (app.js, style.css, …)
       - ./dashboards:/srv/sites:ro                    # per-site built specs (dashboard.json)
       - certbot-webroot:/var/www/certbot

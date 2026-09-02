@@ -16,16 +16,21 @@ spec.theme (+ title), and stamped into the emitted manifest.webmanifest.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
-import sys
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "sdk"))
 
-from iotcore import schema  # noqa: E402
+# Load the canonical schema module DIRECTLY rather than via `from iotcore import schema`:
+# building a dashboard is a build-time concern and must not drag in an MQTT client
+# (iotcore/__init__ imports the adapter, which needs paho). schema.py needs only PyYAML.
+_spec = importlib.util.spec_from_file_location(
+    "iotcore_schema", ROOT / "sdk" / "iotcore" / "schema.py")
+schema = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(schema)
 
 CARD_TYPES = {"metric", "gauge", "source-split", "switch", "chart"}
 
