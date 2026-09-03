@@ -13,7 +13,10 @@ services:
     image: emqx/emqx:5.8
     container_name: ms_emqx
     ports:
-      - "${MQTT_PORT:-1883}:1883"    # edge/devices — firewall to VPN/known IPs, never public
+      # edge/devices. Exposure is a separate decision from the HTTP side: keep this on
+      # 0.0.0.0 only behind a firewall that allows your sites' egress IPs, otherwise set
+      # MQTT_BIND_ADDR=127.0.0.1 until the first gateway is commissioned.
+      - "${MQTT_BIND_ADDR:-0.0.0.0}:${MQTT_PORT:-1883}:1883"
       - "127.0.0.1:18083:18083"      # admin UI — localhost only, reach via SSH tunnel
     environment:
       EMQX_AUTHENTICATION__1__MECHANISM: jwt
