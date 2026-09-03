@@ -25,7 +25,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 import psycopg
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from psycopg.rows import dict_row
 
@@ -43,15 +43,14 @@ def _conn():
         row_factory=dict_row)
 
 
-def auth(site: str, authorization: str | None = Header(None)) -> None:
-    """Two accepted credentials: the static API_TOKEN, or a broker JWT (signed with
-    JWT_SECRET) whose own ACL covers this site — so one dashboard token opens both the
-    broker and the API, scoped to its site. Both unset = open (dev)."""
+def authorize(site: str, supplied: str | None) -> None:
+    """The one authorization decision. Two accepted credentials: the static API_TOKEN, or a
+    broker JWT (signed with JWT_SECRET) whose own ACL covers this site — so one dashboard
+    token opens the broker, the read API, and that site's dashboard files. Both unset = open (dev)."""
     static = os.environ.get("API_TOKEN")
     secret = os.environ.get("JWT_SECRET")
     if not static and not secret:
         return
-    supplied = authorization[7:] if authorization and authorization.startswith("Bearer ") else None
     if supplied is None:
         raise HTTPException(status_code=401, detail="missing bearer token")
     if static and supplied == static:
@@ -67,6 +66,26 @@ def auth(site: str, authorization: str | None = Header(None)) -> None:
             return
         raise HTTPException(status_code=403, detail="token not scoped to this site")
     raise HTTPException(status_code=401, detail="bad token")
+
+
+def _bearer(authorization: str | None) -> str | None:
+    return authorization[7:] if authorization and authorization.startswith("Bearer ") else None
+
+
+def auth(site: str, authorization: str | None = Header(None)) -> None:
+    authorize(site, _bearer(authorization))
+
+
+@app.get("/authz", status_code=204)
+def authz(site: str, authorization: str | None = Header(None), token: str | None = None):
+    """Authorization check for the web server's `auth_request`, so a site's dashboard files
+    are gated by the same token as its data. Without it the spec — client name, device
+    inventory, topology — is readable by anyone who guesses the site id.
+
+    The token arrives either as a bearer header (how the dashboard fetches its own spec) or
+    as ?token= (the access link a client is handed). 204 = allow, 401/403 = refuse."""
+    authorize(site, _bearer(authorization) or token)
+    return Response(status_code=204)
 
 
 def _bucket(bucket: str | None) -> str | None:

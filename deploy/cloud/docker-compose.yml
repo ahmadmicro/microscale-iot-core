@@ -79,6 +79,7 @@ services:
       - ${NGINX_TEMPLATE_DIR:-./nginx/templates}:/etc/nginx/templates:ro
       - ../../dashboard:/srv/pwa:ro                   # shared PWA shell (app.js, style.css, …)
       - ./dashboards:/srv/sites:ro                    # per-site built specs (dashboard.json)
+      - ./landing:/srv/landing:ro                    # public landing page at /
       - certbot-webroot:/var/www/certbot
       - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
     depends_on: [emqx, api]

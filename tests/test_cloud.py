@@ -161,3 +161,15 @@ def test_broker_url_rejects_unknown_scheme():
         parse_broker_url("http://b.lan")       # http is not an MQTT transport
     with pytest.raises(ValueError):
         parse_broker_url("wss:///mqtt")        # no host
+
+
+def test_authz_endpoint_gates_dashboard_files(client):
+    """nginx auth_request calls this to gate a site's spec. Without it the dashboard.json —
+    client name, device inventory, topics — is public to anyone who guesses the site id."""
+    tok = token("dashboard", "site-a")
+    assert client.get("/authz?site=site-a").status_code == 401                      # anonymous
+    assert client.get(f"/authz?site=site-a&token={tok}").status_code == 204         # access link
+    assert client.get("/authz?site=site-a",
+                      headers={"Authorization": f"Bearer {tok}"}).status_code == 204  # the PWA
+    assert client.get(f"/authz?site=site-b&token={tok}").status_code == 403         # other client
+    assert client.get("/authz?site=site-a&token=forged").status_code == 401

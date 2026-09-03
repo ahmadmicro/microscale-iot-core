@@ -11,16 +11,31 @@ server {
     # A bare / is not a dashboard. Answer plainly instead of a bare 404 — and do NOT
     # enumerate sites here: the site list is client names, which are not public.
     location = / {
-        default_type text/plain;
-        return 200 "Microscale IoT\nDashboards are served at /s/<site>/\n";
+        root /srv/landing;
+        try_files /index.html =404;
     }
 
     # A site's own files must NEVER fall back to the shared shell: serving the shell's
     # dashboard.json (which points at a dev broker) yields a page that looks fine and
     # silently connects nowhere. Missing spec => 404, which is diagnosable.
     location ~ ^/s/(?<gsite>[a-z0-9-]+)/(?<gfile>dashboard\.json|manifest\.webmanifest)$ {
+        # A site's spec names the client, its devices and its topics. Gate it with the same
+        # token as the data, or anyone who guesses a site id reads the inventory.
+        # auth_request subrequests do NOT inherit query args, so capture the token here in
+        # the parent — subrequests share the parent's variables, $arg_token would be empty.
+        set $authz_token $arg_token;
+        auth_request /_authz;
         root /srv;
         try_files /sites/$gsite/$gfile =404;
+    }
+
+    # the token check behind auth_request — the historian makes the same decision it makes
+    # for the read API, so one token governs broker, data and dashboard alike
+    location = /_authz {
+        internal;
+        proxy_pass http://api:8090/authz?site=$gsite&token=$authz_token;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
     }
 
     # per-site dashboards:  /s/<site>/  → built spec, falling back to the shared PWA shell

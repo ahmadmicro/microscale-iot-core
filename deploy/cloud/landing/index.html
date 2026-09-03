@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0a7d55" />
+<title>Microscale IoT</title>
+<meta name="description" content="Live energy and equipment monitoring for your site — sensors to dashboard, on open standards." />
+<!-- Public page. It must never enumerate sites or clients: dashboards are private and
+     reached by an access link. Self-contained on purpose (no CDN, no fonts to fetch) so it
+     loads on a phone over a bad connection. -->
+<style>
+  :root {
+    --brand: #0a7d55; --brand-2: #0e9c6a;
+    --bg: #f6f7f8; --surface: #fff; --text: #16202a; --muted: #5d6b78;
+    --border: #e4e8ec; --shadow: 0 1px 2px rgba(16,32,42,.05), 0 8px 24px rgba(16,32,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0d1116; --surface:#161c22; --text:#e8eef4; --muted:#94a2b0;
+            --border:#232c34; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 0 20px; }
+  a { color: var(--brand); }
+
+  /* ---- header ---- */
+  header {
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+    color: #fff; padding: calc(28px + env(safe-area-inset-top)) 0 0;
+  }
+  .bar { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -.01em; }
+  .mark {
+    width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,.18);
+    display: grid; place-items: center; flex: none;
+  }
+  .hero { padding: 46px 0 56px; max-width: 640px; }
+  .hero h1 {
+    font-size: clamp(1.9rem, 5.2vw, 2.9rem); line-height: 1.15; margin: 0 0 14px;
+    letter-spacing: -.03em; font-weight: 700;
+  }
+  .hero p { margin: 0; font-size: 1.08rem; color: rgba(255,255,255,.92); }
+  .flow {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 26px; font-size: .82rem; color: rgba(255,255,255,.9);
+  }
+  .flow span {
+    background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+    padding: 5px 11px; border-radius: 999px; white-space: nowrap;
+  }
+  .flow i { opacity: .65; font-style: normal; }
+
+  /* ---- cards ---- */
+  main { padding: 40px 0 8px; }
+  h2 { font-size: 1.32rem; letter-spacing: -.02em; margin: 0 0 6px; }
+  .lede { color: var(--muted); margin: 0 0 22px; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; box-shadow: var(--shadow);
+  }
+  .card h3 { margin: 0 0 6px; font-size: 1rem; letter-spacing: -.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: .93rem; }
+  .ico { font-size: 1.35rem; line-height: 1; display: block; margin-bottom: 10px; }
+
+  /* ---- next steps ---- */
+  .steps { counter-reset: s; display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+  .steps li {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 20px 18px 58px; position: relative; box-shadow: var(--shadow);
+  }
+  .steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 18px; top: 18px;
+    width: 26px; height: 26px; border-radius: 50%;
+    background: color-mix(in srgb, var(--brand) 14%, transparent);
+    color: var(--brand); font-size: .84rem; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  .steps strong { display: block; margin-bottom: 3px; letter-spacing: -.01em; }
+  .steps span { color: var(--muted); font-size: .93rem; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
+    background: color-mix(in srgb, var(--brand) 9%, transparent);
+    padding: 1px 6px; border-radius: 5px; color: var(--brand);
+  }
+
+  section { margin-bottom: 42px; }
+  footer {
+    border-top: 1px solid var(--border); margin-top: 20px;
+    padding: 22px 0 calc(30px + env(safe-area-inset-bottom));
+    color: var(--muted); font-size: .87rem;
+    display: flex; flex-wrap: wrap; gap: 10px 20px; justify-content: space-between;
+  }
+  .status { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.ok { background: #10b981; } .dot.bad { background: #ef4444; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="bar">
+      <span class="mark" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff"
+             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/>
+        </svg>
+      </span>
+      Microscale IoT
+    </div>
+    <div class="hero">
+      <h1>See what your site is actually using.</h1>
+      <p>
+        Live power, fuel and equipment status from your own plant room — on your phone,
+        on open standards, with no vendor cloud in the middle.
+      </p>
+      <div class="flow" aria-label="How data reaches you">
+        <span>Sensors &amp; meters</span><i>→</i>
+        <span>On-site gateway</span><i>→</i>
+        <span>Encrypted link</span><i>→</i>
+        <span>Your dashboard</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>What this service does</h2>
+    <p class="lede">One pipe from the equipment in your building to a page you can read.</p>
+    <div class="grid">
+      <div class="card">
+        <span class="ico" aria-hidden="true">⚡</span>
+        <h3>Live monitoring</h3>
+        <p>Load, voltage, tank levels and machine state, updating as they change — with
+           grid&nbsp;⇄&nbsp;generator clearly marked so you know when you're burning fuel.</p>
+      </div>
+      <div class="card">
+        <span class="ico" aria-hidden="true">🎛️</span>
+        <h3>Control</h3>
+        <p>Switch equipment from the dashboard. Every command is confirmed by the device
+           itself, so what you see is the real state, not a hopeful guess.</p>
+      </div>
+      <div class="card">
+        <span class="ico" aria-hidden="true">📈</span>
+        <h3>History &amp; carbon</h3>
+        <p>Trends over time, plus energy split by source — the basis for Scope&nbsp;1 and
+           Scope&nbsp;2 reporting rather than an estimate after the fact.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What to do next</h2>
+    <p class="lede">Dashboards here are private — each one opens with its own access link.</p>
+    <ol class="steps">
+      <li>
+        <strong>You were sent a link</strong>
+        <span>Open it, then add it to your home screen — it installs like an app and keeps
+              working. Your browser remembers the key, so the link only has to be used once.
+              New to it? Read the <a href="https://github.com/ahmadmicro/microscale-iot-core/blob/master/docs/user-guide.md">user guide</a>.</span>
+      </li>
+      <li>
+        <strong>You're setting up a site</strong>
+        <span>Commission the gateway and devices, then ask your administrator to onboard the
+              site — that issues the gateway credential and the dashboard links in one step.</span>
+      </li>
+      <li>
+        <strong>You're checking whether the service is up</strong>
+        <span>The health endpoint is public: <code>/api/health</code>. Everything else —
+              readings, history and dashboards — requires a token.</span>
+      </li>
+      <li>
+        <strong>You'd like monitoring for your site</strong>
+        <span>Get in touch with Microscale and we'll scope the devices and the install.</span>
+      </li>
+    </ol>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <span>© Microscale Labs — Layer-2 IoT platform</span>
+  <span class="status"><span class="dot" id="dot"></span><span id="status">checking service…</span></span>
+</footer>
+
+<script>
+  // Public health check only — no site data is reachable from this page.
+  fetch("/api/health", { cache: "no-store" })
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function () {
+      document.getElementById("dot").className = "dot ok";
+      document.getElementById("status").textContent = "service operational";
+    })
+    .catch(function () {
+      document.getElementById("dot").className = "dot bad";
+      document.getElementById("status").textContent = "service unreachable";
+    });
+</script>
+</body>
+</html>

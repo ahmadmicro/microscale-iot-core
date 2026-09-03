@@ -87,6 +87,16 @@ wait_healthy() {
     if curl -fsS --max-time 5 "$url" >/dev/null 2>&1; then info "healthy"; return 0; fi
     sleep 2
   done
+  # Say WHY rather than leaving a 500 to be dug out of the api logs. The common cause is a
+  # data volume left over from an earlier init: postgres sets its password only on first
+  # initialisation, so a fresh .env silently disagrees with an old volume.
+  if ! "${DC[@]}" exec -T -e PGPASSWORD="${PG_PASSWORD:-}" timescaledb \
+        psql -U postgres -d iotcore -c 'select 1' >/dev/null 2>&1; then
+    warn "the database is refusing this .env's PG_PASSWORD."
+    warn "if this stack previously ran with a different .env, its data volume still has the"
+    warn "old password. Either restore that password in .env, or discard the old data:"
+    warn "    ${DC[*]} down && docker volume rm \$(basename \"\$PWD\")_tsdb-data && ./deploy.sh up"
+  fi
   warn "no healthy response after 2 minutes — inspect with: ./deploy.sh logs"
   return 1
 }

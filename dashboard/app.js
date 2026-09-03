@@ -255,6 +255,23 @@
     }
   }
 
+  // Shown when the spec is refused: this dashboard is private and the link carries the key.
+  function needAccess() {
+    conn("off", "no access");
+    document.getElementById("site-title").textContent = "Microscale IoT";
+    document.getElementById("tabs").innerHTML = "";
+    var g = document.getElementById("grid");
+    g.innerHTML = "";
+    var el = document.createElement("div");
+    el.className = "card wide notice";
+    el.innerHTML =
+      '<div class="title">Access required</div>' +
+      "<p>This dashboard is private. Open it with the access link you were sent — " +
+      "the link carries your key, and your browser remembers it afterwards.</p>" +
+      "<p class=\"sub\">If the link has expired, ask whoever manages your site for a new one.</p>";
+    g.appendChild(el);
+  }
+
   function setupBell() {
     if (!("Notification" in window)) return;
     var bell = document.getElementById("bell");
@@ -277,9 +294,19 @@
   }
   function apiHeaders() { return token ? { "Authorization": "Bearer " + token } : {}; }
 
-  fetch("dashboard.json").then(function (r) { return r.json(); }).then(function (s) {
+  // the spec is access-controlled, so the token must be known before we ask for it
+  loadToken();
+  var manifestLink = document.querySelector('link[rel="manifest"]');
+  if (token && manifestLink) {
+    manifestLink.href = "manifest.webmanifest?token=" + encodeURIComponent(token);
+  }
+
+  fetch("dashboard.json", { headers: apiHeaders() }).then(function (r) {
+    if (r.status === 401 || r.status === 403) { needAccess(); throw new Error("unauthorized"); }
+    if (!r.ok) throw new Error("spec http " + r.status);
+    return r.json();
+  }).then(function (s) {
     spec = s;
-    loadToken();
     role = new URLSearchParams(location.search).get("role") || spec.defaultRole || "operator";
     applyTheme(spec.theme);
     document.getElementById("site-title").textContent = spec.title;
@@ -303,5 +330,8 @@
       var env; try { env = JSON.parse(payload.toString()); } catch (e) { return; }
       (byTopic[topic] || []).forEach(function (c) { c.update(env); });
     });
-  }).catch(function (e) { conn("off", "spec error"); console.error(e); });
+  }).catch(function (e) {
+    if (e && e.message === "unauthorized") return;   // needAccess() already explained it
+    conn("off", "spec error"); console.error(e);
+  });
 })();
