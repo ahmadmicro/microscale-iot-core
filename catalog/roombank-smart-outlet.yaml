@@ -1,0 +1,25 @@
+# BENCHED (bench gateway, 2026-09-03) — paired and controllable, BUT see the energy caveat.
+model: roombank.smart-outlet
+aliases: [siliconlabs-roombanksmartoutlet]
+class: Cat2                    # mains actuator + meter
+interface: zigbee              # via Zigbee2MQTT
+metrics: [device.relay, electrical.active_power, electrical.voltage, electrical.current]
+gate:
+  stock: PASS — paired straight into Zigbee2MQTT, no vendor hub or cloud.
+benchmark:
+  paired: yes (joins as a Router — mains powered)
+  readings_idle: voltage 228.39 V, power 0 W, current 0 A with nothing plugged in — plausible
+  accuracy: NOT YET MEASURED against a reference meter — do this before quoting it
+adapter: adapters/zigbee2mqtt_bridge.py (relay + power_metering, with electrical.energy excluded)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - **Zigbee2MQTT has no tailored converter for this device** — it reports as an
+    "automatically generated definition", derived from the device's ZCL clusters.
+  - **electrical.energy is WITHHELD.** Z2M surfaces the raw metering counter as if it were
+    kWh: 1,039,640 "kWh" from a socket that has metered nothing. The device's ZCL
+    divisor/multiplier is not being applied. Until the true scale is established on a
+    bench (integrate active_power against a known load and compare the counter delta),
+    the bridge config carries `exclude: [electrical.energy]` so a false number never
+    reaches history. Power/voltage/current appear sane and are published.
+  - Treat the whole auto-generated definition with suspicion until benched: an untailored
+    converter can misread any attribute, not just this one.

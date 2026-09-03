@@ -64,6 +64,15 @@ class Device:
         self.relay = bool(cfg.get("relay", False))
         self.power_metering = bool(cfg.get("power_metering", False))
         self.light = bool(cfg.get("light", False))
+        # Metrics to withhold for this device. Z2M's auto-generated definitions can surface
+        # a raw ZCL counter without the device's divisor applied — publishing that as a
+        # canonical reading puts a number into history that is simply untrue. Withhold it
+        # until the device is benched, rather than shipping a plausible-looking lie.
+        self.exclude = set(cfg.get("exclude") or ())
+        # Sensor metrics are not knowable from config — any Zigbee device may report any
+        # of them. Learn them from what the device actually sends, so $meta describes the
+        # device rather than the union of everything the bridge could theoretically map.
+        self.seen: set[str] = set()
 
 
 class Zigbee2MqttBridge:
@@ -92,6 +101,12 @@ class Zigbee2MqttBridge:
 
     def _publish_reading(self, d: Device, metric: str, value: Any, *,
                          channel: str = "main") -> None:
+        if metric in d.exclude:
+            return
+        if metric in (m for m, _ in SENSOR_MAP.values()) and metric not in d.seen:
+            d.seen.add(metric)
+            self._client.publish(f"{self._base(d)}/$meta", json.dumps(self._descriptor(d)),
+                                 qos=1, retain=True)   # $meta must stay truthful as we learn
         key = (d.device_id, channel, metric)
         self._seq[key] = self._seq.get(key, 0) + 1
         # src is an energy-attribution dimension — stamp it on electrical readings only
@@ -101,13 +116,14 @@ class Zigbee2MqttBridge:
                              json.dumps(env), qos=1, retain=True)
 
     def _descriptor(self, d: Device) -> dict[str, Any]:
-        points = [m for m, _ in SENSOR_MAP.values()]
+        points = sorted(d.seen)
         if d.power_metering:
             points += [m for m, _ in ELECTRICAL_MAP.values()]
         if d.relay:
             points.append("device.relay")
         if d.light:
             points += ["light.brightness", "light.color_temp", "light.color"]
+        points = [m for m in points if m not in d.exclude]
         desc = {
             "schema_version": schema.SCHEMA_VERSION,
             "device_id": d.device_id,

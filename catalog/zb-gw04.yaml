@@ -5,16 +5,20 @@ interface: usb-serial          # CH340E UART; consumed by Zigbee2MQTT/ZHA on the
 hardware:
   radio: Silicon Labs EFR32MG21 (Zigbee 3.0), PCB antenna
   usb_uart: WCH CH340E, hardware flow control (v1.2)
-  firmware_shipped: EmberZNet NCP (EZSP v8)
+  firmware_shipped: EmberZNet NCP (EZSP v8 per vendor docs; our unit arrived on 7.3.1.0 / EZSP v12)
 
 gate:
   stock: >-
     PASS — no cloud at all; ships as a plain EmberZNet NCP serial coordinator,
     works with Zigbee2MQTT ("adapter: ember") and ZHA out of the box.
 
-benchmark: TBD (bench-eval pending — pair with in-stock Zigbee switches/terminal blocks/bulbs)
+benchmark:
+  status: WORKING (bench gateway on macOS, 2026-09-03) — coordinator up, devices paired,
+    control verified through canonical topics
+  firmware_as_shipped_to_us: EmberZNet 7.3.1.0 build 176 (EZSP v12)
+  firmware_now: EmberZNet 8.2.2 [GA] build 436 (EZSP v18) — updated 2026-09-03
 
-adapter: zigbee2mqtt bridge (planned, same family-bridge pattern as adapters/tasmota_bridge.py)
+adapter: adapters/zigbee2mqtt_bridge.py (config row per paired device)
 
 procurement:
   supplier: TBD (easyiot; AliExpress widely stocked)
@@ -22,11 +26,33 @@ procurement:
   certification: TBD (SONCAP)
 
 notes: |
+  - **DTR IS WIRED TO THE RADIO'S RESET PIN.** node-serialport (so Zigbee2MQTT, and the
+    flasher) asserts DTR on open, which holds the EFR32 in reset forever: the port opens
+    cleanly and the NCP answers nothing at any baud rate, with or without flow control,
+    and no bootloader banner. It responds ONLY with DTR de-asserted and RTS asserted.
+    There is no Zigbee2MQTT setting for line states, so run tools/serial_tcp_bridge.py
+    (--no-dtr --rts) and point Zigbee2MQTT at `tcp://127.0.0.1:20108` with adapter `ember`.
+    Do NOT let the host drive RTS for hardware flow control: RTS is part of the same
+    reset/boot circuit, so toggling it can reset the radio mid-session.
+  - **Firmware update procedure** (needed: EZSP v12 is below the 13-19 the `ember` driver
+    requires, and the legacy `ezsp` driver is deprecated):
+      pip install universal-silabs-flasher
+      # board- AND revision-specific image, from github.com/Nerivec/silabs-firmware-builder
+      #   v1.2 -> easyiot_zb-gw04-1v2_zigbee_ncp_<ver>_115200_hw_flow.gbl
+      #   v1.1 -> easyiot_zb-gw04-1v1_zigbee_ncp_<ver>_115200_sw_flow.gbl
+      universal-silabs-flasher dump-gbl-metadata --firmware <file>   # verify before writing
+      universal-silabs-flasher --device socket://127.0.0.1:20108 \
+        --probe-methods ezsp:115200,bootloader:115200 flash --firmware <file>
+    Flash through the same serial bridge — the flasher hits the identical DTR wall.
+    Do NOT use the widely-cited `ncp-uart-hw-*-zbdonglee-*.gbl`: that is the Sonoff
+    Dongle-E, a different board. Flash the application only, never the bootloader: a
+    failed app transfer leaves the device in its bootloader and re-flashable.
+    The Zigbee network (channel/PAN/keys in NVM3) SURVIVED the 7.3.1 -> 8.2.2 update.
+  - **macOS:** Docker Desktop cannot pass a USB device into a container, so the
+    deploy/edge zigbee profile does not apply — Zigbee2MQTT runs natively there.
   - Lowest-friction Zigbee entry: plug into the Phase-2 edge gateway (Pi/mini-PC) running
     Zigbee2MQTT and every paired device appears as JSON over MQTT — one canonical bridge
     (config rows per device) unlocks the whole in-stock Zigbee inventory.
   - Use Zigbee2MQTT's `ember` driver; the older `ezsp` driver is deprecated.
   - Mount on a short USB extension lead — EFR32 coordinators are sensitive to USB3/host RF noise.
-  - RGB bulbs need light-control metrics (brightness/color) that are NOT in canonical v1.0 —
-    decide before the schema freeze whether they make v1.0 or wait for a MINOR bump.
   - References: blakadder easyiot_ZB-GW04 entry; techtactician review/connection guide.

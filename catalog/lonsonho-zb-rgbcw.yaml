@@ -1,0 +1,20 @@
+# BENCHED (bench gateway, 2026-09-03) — paired, controlled, canonical topics verified.
+model: lonsonho.zb-rgbcw
+class: Cat2                    # mains light endpoint
+interface: zigbee              # via Zigbee2MQTT
+metrics: [device.relay, light.brightness, light.color_temp, light.color]
+gate:
+  stock: PASS — paired straight into Zigbee2MQTT, no vendor hub or cloud.
+benchmark:
+  paired: yes (Zigbee 3.0, joins as a Router — mains powered)
+  control: verified end-to-end through canonical topics — light.brightness 54.3% -> 20.1%
+    -> 55.1% and light.color accepted; state confirmed from the device, not echoed
+  accuracy: n/a (no metering)
+adapter: adapters/zigbee2mqtt_bridge.py (config row with relay + light)
+procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP) }
+notes: |
+  - Reports colour in xy (color_mode: xy), so light.color_temp is absent while in colour
+    mode — expected, not a fault. Our bridge publishes color_temp only when the device
+    sends it, and treats light.color as write-only in 0.1.
+  - Routes for other devices while powered, but occupants switching it off at the wall
+    removes that router from the mesh — do not depend on bulbs as mesh infrastructure.
