@@ -14,6 +14,21 @@ server {
     ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
 
+    # A bare / is not a dashboard. Answer plainly instead of a bare 404 — and do NOT
+    # enumerate sites here: the site list is client names, which are not public.
+    location = / {
+        default_type text/plain;
+        return 200 "Microscale IoT\nDashboards are served at /s/<site>/\n";
+    }
+
+    # A site's own files must NEVER fall back to the shared shell: serving the shell's
+    # dashboard.json (which points at a dev broker) yields a page that looks fine and
+    # silently connects nowhere. Missing spec => 404, which is diagnosable.
+    location ~ ^/s/(?<gsite>[a-z0-9-]+)/(?<gfile>dashboard\.json|manifest\.webmanifest)$ {
+        root /srv;
+        try_files /sites/$gsite/$gfile =404;
+    }
+
     # per-site dashboards:  https://${DOMAIN}/s/<site>/
     location ~ ^/s/(?<site>[a-z0-9-]+)/(?<file>.*)$ {
         root /srv;
