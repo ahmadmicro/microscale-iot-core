@@ -100,6 +100,19 @@ class Zigbee2MqttBridge:
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
 
+        # Additional canonical destinations. A gateway usually wants its readings BOTH
+        # upstream and on its own broker, so a local dashboard keeps working when the
+        # link to the cloud is down — the whole point of putting a gateway on site.
+        self._extra: list = []
+        for i, extra in enumerate(cfg.get("also_publish") or []):
+            eb = connect_kwargs(extra.get("url"), extra.get("host", "localhost"),
+                                int(extra.get("port", 1883)))
+            ec = make_client(f"{self.site}.z2m-bridge-{i}", eb,
+                             username=extra.get("username"), password=extra.get("password"))
+            ec.on_connect = self._on_connect          # same duties: $meta + /cmd
+            ec.on_message = self._on_message
+            self._extra.append((ec, eb))
+
         src = cfg.get("source_broker")
         if src:
             self._src_broker = connect_kwargs(src.get("url"), src.get("host", "localhost"),
@@ -122,15 +135,18 @@ class Zigbee2MqttBridge:
             return
         if metric in (m for m, _ in SENSOR_MAP.values()) and metric not in d.seen:
             d.seen.add(metric)
-            self._client.publish(f"{self._base(d)}/$meta", json.dumps(self._descriptor(d)),
-                                 qos=1, retain=True)   # $meta must stay truthful as we learn
+            for client in self._canonical_clients():   # $meta must stay truthful as we learn
+                client.publish(f"{self._base(d)}/$meta", json.dumps(self._descriptor(d)),
+                               qos=1, retain=True)
         key = (d.device_id, channel, metric)
         self._seq[key] = self._seq.get(key, 0) + 1
         # src is an energy-attribution dimension — stamp it on electrical readings only
         source = d.source if metric.startswith("electrical.") else None
         env = schema.build_envelope(metric, value, source=source, seq=self._seq[key])
-        self._client.publish(f"{self._base(d)}/{channel}/{metric}",
-                             json.dumps(env), qos=1, retain=True)
+        payload = json.dumps(env)
+        topic = f"{self._base(d)}/{channel}/{metric}"
+        for client in self._canonical_clients():
+            client.publish(topic, payload, qos=1, retain=True)
 
     def _descriptor(self, d: Device) -> dict[str, Any]:
         points = sorted(d.seen)
@@ -153,8 +169,14 @@ class Zigbee2MqttBridge:
         }
         return {k: v for k, v in desc.items() if v is not None}
 
+    def _canonical_clients(self):
+        return [self._client, *(c for c, _ in self._extra)]
+
     # ---- lifecycle ----
     def run(self) -> None:
+        for client, broker in self._extra:
+            client.connect(broker.host, broker.port, keepalive=30)
+            client.loop_start()
         if self._src is not self._client:
             self._src.connect(self._src_broker.host, self._src_broker.port, keepalive=30)
             self._src.loop_start()
@@ -206,9 +228,10 @@ class Zigbee2MqttBridge:
             state = json.loads(payload).get("state", "")
         except (json.JSONDecodeError, AttributeError):
             state = payload.strip()
-        self._client.publish(f"{self._base(d)}/$online",
-                             "true" if state.lower() == "online" else "false",
-                             qos=1, retain=True)
+        for client in self._canonical_clients():
+            client.publish(f"{self._base(d)}/$online",
+                           "true" if state.lower() == "online" else "false",
+                           qos=1, retain=True)
 
     def _handle_state(self, d: Device, payload: str) -> None:
         try:
