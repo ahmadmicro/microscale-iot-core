@@ -134,3 +134,30 @@ def test_deploy_sh_service_token_matches_mint_token():
     assert head == {"alg": "HS256", "typ": "JWT"}
     # a sink credential that expires silently stops ingestion — keep it long-lived
     assert (claims["exp"] - claims["iat"]) > 5 * 365 * 86400
+
+
+@pytest.mark.parametrize("url,expect", [
+    ("mqtt://b.lan",                 ("b.lan", 1883, "tcp", False)),
+    ("mqtts://b.lan",                ("b.lan", 8883, "tcp", True)),
+    ("ws://b.lan:8083/mqtt",         ("b.lan", 8083, "websockets", False)),
+    ("wss://iot.example.com/mqtt",   ("iot.example.com", 443, "websockets", True)),
+    ("wss://b.lan:8443/x",           ("b.lan", 8443, "websockets", True)),
+])
+def test_broker_url_transports(url, expect):
+    """A gateway must be able to reach a cloud broker over the HTTPS front door, so no
+    plaintext MQTT port has to be opened in the firewall."""
+    import sys
+    sys.path.insert(0, str(ROOT / "sdk"))
+    from iotcore.broker import parse_broker_url
+    b = parse_broker_url(url)
+    assert (b.host, b.port, b.transport, b.tls) == expect
+
+
+def test_broker_url_rejects_unknown_scheme():
+    import sys
+    sys.path.insert(0, str(ROOT / "sdk"))
+    from iotcore.broker import parse_broker_url
+    with pytest.raises(ValueError):
+        parse_broker_url("http://b.lan")       # http is not an MQTT transport
+    with pytest.raises(ValueError):
+        parse_broker_url("wss:///mqtt")        # no host

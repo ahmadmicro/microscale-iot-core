@@ -29,6 +29,7 @@ import paho.mqtt.client as mqtt  # noqa: E402
 import yaml  # noqa: E402
 
 from iotcore import schema  # noqa: E402
+from iotcore.broker import connect_kwargs, make_client  # noqa: E402
 
 DEFAULT_CONFIG = Path(__file__).with_name("tasmota_bridge.yaml")
 
@@ -64,10 +65,12 @@ class TasmotaBridge:
         self._by_topic = {d.topic: d for d in self.devices}
         self._by_id = {d.device_id: d for d in self.devices}
         self._seq: dict[tuple[str, str, str], int] = {}
-        self._client = mqtt.Client(client_id=f"{self.site}.tasmota-bridge")
         broker = cfg.get("broker", {})
-        if broker.get("username") or broker.get("password"):
-            self._client.username_pw_set(broker.get("username"), broker.get("password"))
+        self._broker = connect_kwargs(broker.get("url"), self.host, self.port)
+        self.host, self.port = self._broker.host, self._broker.port
+        self._client = make_client(f"{self.site}.tasmota-bridge", self._broker,
+                                   username=broker.get("username"),
+                                   password=broker.get("password"))
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
 

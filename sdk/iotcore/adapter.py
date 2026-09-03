@@ -27,6 +27,7 @@ from typing import Any, Callable
 import paho.mqtt.client as mqtt
 
 from . import schema
+from .broker import connect_kwargs, make_client
 
 
 @dataclass
@@ -75,7 +76,10 @@ class Adapter:
 
     def __init__(self, *, site: str, device_id: str, host: str = "localhost", port: int = 1883,
                  spool_dir: str | None = None,
-                 username: str | None = None, password: str | None = None):
+                 username: str | None = None, password: str | None = None,
+                 broker_url: str | None = None):
+        """broker_url ("wss://host/mqtt", "mqtts://host", …) supersedes host/port and is how
+        an edge gateway reaches a cloud broker without a plaintext MQTT port being opened."""
         self.site = site
         self.device_id = device_id
         self.host = host
@@ -89,9 +93,11 @@ class Adapter:
             self._spool = Path(spool_dir) / f"{site}.{device_id}.spool.jsonl"
             self._spool.parent.mkdir(parents=True, exist_ok=True)
         self._connected = False
-        self._client = mqtt.Client(client_id=f"{site}.{device_id}")
-        if username or password:
-            self._client.username_pw_set(username, password)  # EMQX: device JWT as password
+        self._broker = connect_kwargs(broker_url, host, port)
+        self.host, self.port = self._broker.host, self._broker.port
+        # EMQX: the device/edge JWT is the MQTT password
+        self._client = make_client(f"{site}.{device_id}", self._broker,
+                                   username=username, password=password)
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
         self._client.will_set(self._topic_meta_online(), payload="false", qos=1, retain=True)

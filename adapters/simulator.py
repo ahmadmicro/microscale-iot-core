@@ -29,6 +29,9 @@ HOST = os.environ.get("MQTT_HOST", "localhost")
 PORT = int(os.environ.get("MQTT_PORT", "1883"))
 USERNAME = os.environ.get("MQTT_USERNAME")
 PASSWORD = os.environ.get("MQTT_PASSWORD")  # EMQX edge/device JWT
+# e.g. MQTT_URL=wss://iot.example.com/mqtt — reaches a cloud broker through its TLS
+# front door, so no plaintext MQTT port has to be opened for a gateway
+URL = os.environ.get("MQTT_URL")
 
 
 def _t() -> float:
@@ -123,7 +126,7 @@ class DieselTank(Adapter):
 
 
 def main() -> None:
-    kw = {"site": SITE, "host": HOST, "port": PORT,
+    kw = {"site": SITE, "host": HOST, "port": PORT, "broker_url": URL,
           "username": USERNAME, "password": PASSWORD}
     devices = [
         MainMeter(device_id="main-meter", **kw),
