@@ -24,6 +24,7 @@ Pass the output as the MQTT *password* (username: anything readable, e.g. the ro
 from __future__ import annotations
 
 import argparse
+import os
 import time
 
 import jwt
@@ -58,9 +59,13 @@ def main() -> None:
     ap.add_argument("role", choices=["device", "edge", "dashboard", "service"])
     ap.add_argument("--site", default="-", help="site id (not used by the service role)")
     ap.add_argument("--device", help="device_id (device role only)")
-    ap.add_argument("--secret", required=True, help="the broker's JWT HMAC secret")
+    ap.add_argument("--secret", default=os.environ.get("JWT_SECRET"),
+                    help="the broker's JWT HMAC secret (default: $JWT_SECRET, which keeps "
+                         "it out of the command line where ps can read it)")
     ap.add_argument("--days", type=int, default=365, help="token lifetime (default 365)")
     args = ap.parse_args()
+    if not args.secret:
+        raise SystemExit("no JWT secret: pass --secret or set JWT_SECRET")
 
     name = f"{args.site}.{args.device}" if args.device else f"{args.role}.{args.site}"
     claims = {
