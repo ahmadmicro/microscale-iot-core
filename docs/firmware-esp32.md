@@ -73,7 +73,8 @@ polls commands between readings.
 The rollback design is in [ota.md](ota.md) (family C): A/B partitions with a health-gated
 commit. On MicroPython, practical OTA is replacing the `.py` files (e.g. `mip` from your own
 server, or an mpremote deploy step) — fine for prototypes and commissioning. **Production
-firmware with the full A/B rollback guarantee is the ESP-IDF (C) port** — planned; the contract
+firmware with the full A/B rollback guarantee is the ESP-IDF (C) port** — planned, with
+milestones and preconditions in [esp-idf-port-plan.md](esp-idf-port-plan.md); the contract
 checklist above is its spec, and the `device.fw_*` control metrics are deferred to schema v1.1.
 
 ## Testing without hardware

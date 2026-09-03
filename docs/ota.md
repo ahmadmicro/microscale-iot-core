@@ -42,6 +42,8 @@ Dual-partition A/B with health-gated commit, standard ESP-IDF machinery:
 3. Any crash/watchdog reset before the gate → bootloader boots the previous partition
    automatically. That is the rollback guarantee, and it needs no cloud round-trip.
 
+Sequencing, milestones and open questions for building this: [esp-idf-port-plan.md](esp-idf-port-plan.md).
+
 Control plane (schema v1.1 additions, deferred until this firmware exists — the v1.0
 freeze forbids adding them silently):
 - `device.fw_version` (state, read) — current running version, also in `$meta`.

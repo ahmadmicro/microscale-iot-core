@@ -16,6 +16,7 @@ Background reading, in order of usefulness:
 - [How real devices connect](device-integration.md) — the architecture argument: why one
   canonical contract + per-*family* bridges means a new device is usually a config row, not code.
 - [OTA firmware updates](ota.md) — the per-family update/rollback design.
+- [ESP-IDF port plan](esp-idf-port-plan.md) — planned C firmware for our own hardware: why, milestones, and the preconditions for starting.
 - [`../ROADMAP.md`](../ROADMAP.md) — where the platform is, phase by phase.
 - [`../catalog/`](../catalog/) — the qualified device catalog: one record per benched model,
   including gate results, quirks, and procurement notes.

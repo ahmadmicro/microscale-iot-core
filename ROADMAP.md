@@ -52,7 +52,8 @@ Make it survive the real world and a hostile network.
       cross-site/cross-device spoofing blocked, dashboards can command but not fabricate readings.
       TLS is documented (nginx + certbot sample); certificates happen at deploy time.*
 - [ ] **OTA firmware update** with rollback (a stated production requirement).
-      *Design fixed per family in `docs/ota.md` (Tasmota fleet OTA + safeboot; Z2M OTA with a
+      *Plan: `docs/esp-idf-port-plan.md` (sequenced after the cloud work; edge gateway is the
+      interim answer). Design fixed per family in `docs/ota.md` (Tasmota fleet OTA + safeboot; Z2M OTA with a
       pin-what-you-bench policy; A/B + health-gated rollback for our own ESP32 firmware).
       Implementation is firmware-side — lands with the first path-C device.*
 - **Engagement payoff:** satisfies "zero data loss on outage" + "own your pipe, securely" gates.
