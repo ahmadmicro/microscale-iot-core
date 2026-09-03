@@ -8,7 +8,7 @@
 #     invalidate every credential already issued to clients),
 #   - nothing here deletes a data volume.
 #
-#   ./deploy.sh init [--domain D] [--email E] [--local]
+#   ./deploy.sh init [--domain D] [--email E] [--local|--behind-proxy]
 #   ./deploy.sh up                              build + start, wait until healthy
 #   ./deploy.sh tls                             issue the cert, switch nginx to HTTPS
 #   ./deploy.sh renew                           renew the cert + reload nginx (cron)
@@ -59,8 +59,13 @@ load_env() {
 
 tls_on() { [ "${NGINX_TEMPLATE_DIR:-./nginx/templates}" = "$HTTPS_TEMPLATES" ]; }
 
+# true when another web server on the host owns 80/443 and proxies to us
+proxied() { [ -n "${BIND_ADDR:-}" ] && [ "${BIND_ADDR}" != "0.0.0.0" ]; }
+
 # the URL clients actually use — TLS mode and non-default ports included
 public_base() {
+  # behind a proxy the public URL bears no relation to our own ports, so it is stated
+  if [ -n "${PUBLIC_BASE:-}" ]; then printf '%s' "$PUBLIC_BASE"; return; fi
   if tls_on; then
     if [ "${HTTPS_PORT:-443}" = 443 ]; then printf 'https://%s' "$DOMAIN"
     else printf 'https://%s:%s' "$DOMAIN" "$HTTPS_PORT"; fi
@@ -141,15 +146,17 @@ run_py() {
 
 # --------------------------------------------------------------- commands ---
 cmd_init() {
-  local domain="" email="" local_mode=0
+  local domain="" email="" local_mode=0 proxy_mode=0
   while [ $# -gt 0 ]; do
     case "$1" in
-      --domain) domain="${2:-}"; shift 2 ;;
-      --email)  email="${2:-}";  shift 2 ;;
-      --local)  local_mode=1;    shift ;;
+      --domain)       domain="${2:-}"; shift 2 ;;
+      --email)        email="${2:-}";  shift 2 ;;
+      --local)        local_mode=1;    shift ;;
+      --behind-proxy) proxy_mode=1;    shift ;;
       *) die "unknown option for init: $1" ;;
     esac
   done
+  [ "$local_mode" = 1 ] && [ "$proxy_mode" = 1 ] && die "--local and --behind-proxy are exclusive"
   need openssl
   [ -f "$ENV_FILE" ] && die ".env already exists — refusing to overwrite it.
     It holds JWT_SECRET; regenerating that invalidates every token already issued
@@ -187,13 +194,25 @@ cmd_init() {
       printf '\n# local evaluation — unprivileged ports, certs kept out of /etc\n'
       printf 'HTTP_PORT=8880\nHTTPS_PORT=8444\nMQTT_PORT=11883\nLETSENCRYPT_DIR=./letsencrypt\n'
     fi
+    if [ "$proxy_mode" = 1 ]; then
+      printf '\n# a web server already on this host owns 80/443 and proxies to us:\n'
+      printf '# bind our HTTP port to loopback only, and let that server terminate TLS.\n'
+      printf 'BIND_ADDR=127.0.0.1\nHTTP_PORT=8880\nHTTPS_PORT=8444\n'
+      printf 'LETSENCRYPT_DIR=./letsencrypt\n'
+      printf '# the URL clients use — the host proxy serves it, not us\n'
+      printf 'PUBLIC_BASE=https://%s\n' "$domain"
+    fi
   } > "$ENV_FILE"
   chmod 600 "$ENV_FILE"
 
   info "wrote $ENV_FILE (mode 600)"
   step "next"
   info "./deploy.sh up"
-  [ "$local_mode" = 1 ] || info "./deploy.sh tls        # once DNS points $domain at this box"
+  if [ "$proxy_mode" = 1 ]; then
+    info "then, on the host: proxy $domain -> 127.0.0.1:8880 and issue its certificate there"
+  elif [ "$local_mode" != 1 ]; then
+    info "./deploy.sh tls        # once DNS points $domain at this box"
+  fi
   note "copy .env into your secret manager now — it is gitignored, not backed up"
 }
 
@@ -210,6 +229,10 @@ cmd_up() {
 cmd_tls() {
   load_env
   need curl
+  ! proxied || die "this stack is behind another web server (BIND_ADDR=$BIND_ADDR).
+    That server owns 80/443, so it must hold the certificate — issuing one here would
+    fail the ACME challenge. On the host, point a vhost for $DOMAIN at
+    127.0.0.1:${HTTP_PORT:-8880} and run its own certbot (e.g. certbot --nginx -d $DOMAIN)."
   [ "$DOMAIN" != "localhost" ] || die "TLS needs a real DOMAIN — .env currently says localhost"
   [ -n "${ACME_EMAIL:-}" ] || warn "ACME_EMAIL is empty; certbot will register without a contact address"
 

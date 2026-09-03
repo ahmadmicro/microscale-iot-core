@@ -74,6 +74,26 @@ the renewal to cron:
 **Client dashboards must be built with `wss://` and `https://` URLs** — a page served over
 HTTPS cannot open a `ws://` socket. `deploy.sh site` derives the right base URL for you.
 
+## 3b. Behind a web server that is already there
+
+If the box already runs nginx/Apache for other sites, it owns 80/443 and this stack must sit
+behind it — binding those ports twice would break whatever is already serving.
+
+```bash
+./deploy.sh init --behind-proxy --domain iot.example.com
+./deploy.sh up
+```
+
+That binds the stack's nginx to **127.0.0.1:8880** only, and records `PUBLIC_BASE` so the links
+`deploy.sh site` prints are the ones clients actually use. Then, on the host, add a vhost for the
+domain pointing at `127.0.0.1:8880` and let the host's own certbot hold the certificate —
+`deploy/cloud/nginx/host-proxy.conf.sample` is that vhost, and `./deploy.sh tls` will refuse in
+this mode (the ACME challenge must be answered by whoever owns port 80).
+
+The container nginx already routes `/s/<site>/`, `/mqtt` and `/api/` internally, so the host
+vhost is a single `proxy_pass` — but it must forward the WebSocket upgrade headers, or the
+dashboard's MQTT connection silently fails while the page still loads.
+
 ## 4. Day-to-day commands
 
 | Command | Does |
