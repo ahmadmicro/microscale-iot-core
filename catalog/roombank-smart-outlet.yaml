@@ -3,7 +3,7 @@ model: roombank.smart-outlet
 aliases: [siliconlabs-roombanksmartoutlet]
 class: Cat2                    # mains actuator + meter
 interface: zigbee              # via Zigbee2MQTT
-metrics: [device.relay, electrical.active_power, electrical.voltage, electrical.current]
+metrics: [device.relay, electrical.voltage, electrical.current]   # power/energy withheld — see notes
 gate:
   stock: PASS — paired straight into Zigbee2MQTT, no vendor hub or cloud.
 benchmark:
@@ -15,6 +15,13 @@ procurement: { supplier: TBD, landed_unit_cost: TBD, certification: TBD (SONCAP)
 notes: |
   - **Zigbee2MQTT has no tailored converter for this device** — it reports as an
     "automatically generated definition", derived from the device's ZCL clusters.
+  - **electrical.active_power is WITHHELD too.** Caught with a real load connected:
+    Z2M scales the same quantity two different ways depending on which cluster reported
+    last — haElectricalMeasurement.activePower (raw 480) / acPowerDivisor 10000 = 0.05 W,
+    or seMetering.instantaneousDemand (raw 496) published unscaled as 496 W. With
+    V = 228.39 and I = 0.42 the apparent power is 95.9 VA, so 496 W is physically
+    impossible (P <= V*I) and 0.05 W would imply a power factor of 0.0005. The truth is
+    ~49 W (raw / 10, PF ~0.5). Voltage and current are self-consistent and are published.
   - **electrical.energy is WITHHELD.** Z2M surfaces the raw metering counter as if it were
     kWh: 1,039,640 "kWh" from a socket that has metered nothing. The device's ZCL
     divisor/multiplier is not being applied. Until the true scale is established on a

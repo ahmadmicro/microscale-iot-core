@@ -86,6 +86,11 @@ class Zigbee2MqttBridge:
         self._by_name = {d.name: d for d in self.devices}
         self._by_id = {d.device_id: d for d in self.devices}
         self._seq: dict[tuple[str, str, str], int] = {}
+        # `broker` is where CANONICAL envelopes go (a cloud broker, typically). Zigbee2MQTT
+        # publishes its vendor topics on the gateway's own broker, usually a different one:
+        # an edge token has no business publishing raw zigbee2mqtt/# to the cloud, and the
+        # cloud never sees it anyway. `source_broker` names that local one; omit it and a
+        # single connection serves both, as before.
         broker = cfg.get("broker", {})
         self._broker = connect_kwargs(broker.get("url"), self.host, self.port)
         self.host, self.port = self._broker.host, self._broker.port
@@ -94,6 +99,18 @@ class Zigbee2MqttBridge:
                                    password=broker.get("password"))
         self._client.on_connect = self._on_connect
         self._client.on_message = self._on_message
+
+        src = cfg.get("source_broker")
+        if src:
+            self._src_broker = connect_kwargs(src.get("url"), src.get("host", "localhost"),
+                                              int(src.get("port", 1883)))
+            self._src = make_client(f"{self.site}.z2m-bridge-src", self._src_broker,
+                                    username=src.get("username"), password=src.get("password"))
+            self._src.on_connect = self._on_src_connect
+            self._src.on_message = self._on_message
+        else:
+            self._src_broker = self._broker
+            self._src = self._client
 
     # ---- canonical side ----
     def _base(self, d: Device) -> str:
@@ -138,21 +155,34 @@ class Zigbee2MqttBridge:
 
     # ---- lifecycle ----
     def run(self) -> None:
+        if self._src is not self._client:
+            self._src.connect(self._src_broker.host, self._src_broker.port, keepalive=30)
+            self._src.loop_start()
         self._client.connect(self.host, self.port, keepalive=30)
-        print(f"zigbee2mqtt bridge: site={self.site} devices={[d.device_id for d in self.devices]}")
+        print(f"zigbee2mqtt bridge: site={self.site} devices={[d.device_id for d in self.devices]} "
+              f"source={self._src_broker.host}:{self._src_broker.port} "
+              f"canonical={self.host}:{self.port}")
         self._client.loop_forever()
+
+    def _subscribe_source(self, client) -> None:  # noqa: ANN001
+        for d in self.devices:
+            # exact subscriptions (not a wildcard) so our own /set writes don't loop back
+            client.subscribe(f"{self.z2m_base}/{d.name}", qos=1)
+            client.subscribe(f"{self.z2m_base}/{d.name}/availability", qos=1)
+
+    def _on_src_connect(self, client, userdata, flags, rc):  # noqa: ANN001
+        self._subscribe_source(client)
 
     def _on_connect(self, client, userdata, flags, rc):  # noqa: ANN001
         for d in self.devices:
             client.publish(f"{self._base(d)}/$meta", json.dumps(self._descriptor(d)),
                            qos=1, retain=True)
-            # exact subscriptions (not a wildcard) so our own /set writes don't loop back
-            client.subscribe(f"{self.z2m_base}/{d.name}", qos=1)
-            client.subscribe(f"{self.z2m_base}/{d.name}/availability", qos=1)
             writable = (["device.relay"] if d.relay else []) + (
                 ["light.brightness", "light.color_temp", "light.color"] if d.light else [])
             for metric in writable:
                 client.subscribe(f"{self._base(d)}/main/{metric}/cmd", qos=1)
+        if self._src is client:          # single-broker mode: this client reads Z2M too
+            self._subscribe_source(client)
 
     # ---- message routing ----
     def _on_message(self, client, userdata, msg):  # noqa: ANN001
@@ -235,7 +265,8 @@ class Zigbee2MqttBridge:
                 return
         except (TypeError, ValueError, ZeroDivisionError):
             return
-        self._client.publish(f"{self.z2m_base}/{d.name}/set", json.dumps(doc), qos=1)
+        # writes go to the broker Zigbee2MQTT is actually listening on
+        self._src.publish(f"{self.z2m_base}/{d.name}/set", json.dumps(doc), qos=1)
 
 
 def main() -> None:
