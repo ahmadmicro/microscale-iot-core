@@ -11,6 +11,10 @@ A site is: **devices** → an **edge gateway box** translating them to canonical
 - The site id (e.g. `acme-lagos`) — it prefixes every topic; agree it once, never change it.
 - An **edge token** for the production broker (ops mints it — see the
   [operations guide](operations-guide.md)); not needed while testing against a local broker.
+- The **broker URL**. Against the hosted service this is `wss://<domain>/mqtt` — WebSocket
+  over TLS on port 443, so no MQTT port has to be opened anywhere. Set it as `MQTT_URL`
+  for SDK adapters, or `broker: {url: wss://…, username: edge, password: <token>}` in a
+  bridge config. `mqtt://host` (plain, LAN only) still works for local commissioning.
 - The gateway box (Pi 4 / mini-PC), radios (ZB-GW04 USB dongle for Zigbee), a USB-RS485 adapter
   for Modbus meters, and the devices themselves — check [`../catalog/`](../catalog/) for each
   model's known quirks *before* you're standing in front of it.

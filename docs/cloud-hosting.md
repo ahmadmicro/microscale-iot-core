@@ -27,8 +27,25 @@ on the broker *and* on the read API.
 
 A 2 vCPU / 4 GB VPS handles many sites at typical polling rates; give it disk for history
 (TimescaleDB) and put it in the region nearest your sites. Point an A record at it
-(`iot.<yourdomain>`). Open **80/443** publicly. Port **1883** (MQTT for edge gateways) should be
-restricted to your sites' egress IPs or a VPN — never left open to the internet.
+(`iot.<yourdomain>`).
+
+**Open inbound, and nothing else:**
+
+| Port | Why |
+|---|---|
+| **443/tcp** | HTTPS — dashboards, the read API, **and MQTT over WebSocket** for gateways |
+| **80/tcp** | Let's Encrypt renewal (HTTP-01) and the redirect to HTTPS |
+| **22/tcp** | SSH administration — restrict to your own addresses |
+
+**1883 is deliberately not on that list.** Plain MQTT carries the gateway's JWT in
+cleartext, so rather than opening it, point gateways at `wss://<domain>/mqtt` — port 443,
+TLS, and the same token. Every adapter and bridge accepts that URL (see the
+[installer guide](installer-guide.md)). Open 1883 only if a device cannot speak WebSocket
+(the MicroPython firmware is the case that cannot), and then restrict it to your sites'
+egress addresses — never `0.0.0.0/0`. The stack ships with `MQTT_BIND_ADDR=127.0.0.1`
+under `--behind-proxy` for exactly this reason.
+
+EMQX's admin UI (18083) stays on loopback; reach it through an SSH tunnel.
 
 ## 2. Stand it up
 
