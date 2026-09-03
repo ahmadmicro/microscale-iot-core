@@ -307,6 +307,11 @@
     return r.json();
   }).then(function (s) {
     spec = s;
+    // the landing page reads these to offer "open your dashboard" to a returning visitor
+    try {
+      localStorage.setItem("ms-site", spec.site);
+      if (spec.title) localStorage.setItem("ms-site-title", spec.title);
+    } catch (e) { /* private mode — the link still works, just no shortcut */ }
     role = new URLSearchParams(location.search).get("role") || spec.defaultRole || "operator";
     applyTheme(spec.theme);
     document.getElementById("site-title").textContent = spec.title;

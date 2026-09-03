@@ -20,6 +20,9 @@
             --border:#232c34; --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35); }
   }
   * { box-sizing: border-box; }
+  /* an author `display` beats the UA rule for [hidden], so state it explicitly —
+     otherwise the "open your dashboard" button shows to visitors who have no session */
+  [hidden] { display: none !important; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
@@ -90,6 +93,34 @@
     padding: 1px 6px; border-radius: 5px; color: var(--brand);
   }
 
+  /* ---- call to action ---- */
+  .cta { margin-top: 30px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+    background: #fff; color: var(--brand); border: 0; border-radius: 11px;
+    padding: 13px 22px; font: inherit; font-weight: 650; font-size: .97rem;
+    letter-spacing: -.01em; text-decoration: none; box-shadow: 0 2px 10px rgba(0,0,0,.16);
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn small { display: block; font-weight: 500; opacity: .72; font-size: .78rem; }
+  .btn-ghost {
+    background: rgba(255,255,255,.14); color: #fff; box-shadow: none;
+    border: 1px solid rgba(255,255,255,.32);
+  }
+  #signin { margin-top: 18px; max-width: 460px; display: none; }
+  #signin.open { display: block; }
+  #signin label { display: block; font-size: .85rem; color: rgba(255,255,255,.9); margin-bottom: 7px; }
+  .field { display: flex; gap: 8px; }
+  #site-input {
+    flex: 1; min-width: 0; font: inherit; font-size: .95rem; padding: 11px 13px;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,.34);
+    background: rgba(255,255,255,.12); color: #fff;
+  }
+  #site-input::placeholder { color: rgba(255,255,255,.6); }
+  #site-input:focus { outline: 2px solid #fff; outline-offset: 1px; }
+  #signin .hint { margin: 8px 0 0; font-size: .82rem; color: rgba(255,255,255,.75); }
+  #signin .hint.err { color: #ffd7d7; font-weight: 600; }
+
   section { margin-bottom: 42px; }
   footer {
     border-top: 1px solid var(--border); margin-top: 20px;
@@ -121,6 +152,24 @@
         Live power, fuel and equipment status from your own plant room — on your phone,
         on open standards, with no vendor cloud in the middle.
       </p>
+      <div class="cta">
+        <a class="btn" id="open-dash" href="#signin-form" hidden>
+          <span>Open your dashboard<small id="open-dash-site"></small></span>
+          <span aria-hidden="true">→</span>
+        </a>
+        <button class="btn btn-ghost" id="signin-toggle" type="button">I have an access link</button>
+      </div>
+
+      <form id="signin" method="get" action="#" novalidate>
+        <label for="site-input">Paste your access link, or type your site name</label>
+        <div class="field">
+          <input id="site-input" name="site" autocomplete="off" autocapitalize="none"
+                 spellcheck="false" placeholder="https://…/s/your-site/?token=…  or  your-site" />
+          <button class="btn" type="submit">Go</button>
+        </div>
+        <p class="hint" id="signin-hint">Dashboards are private — the link you were sent carries your key.</p>
+      </form>
+
       <div class="flow" aria-label="How data reaches you">
         <span>Sensors &amp; meters</span><i>→</i>
         <span>On-site gateway</span><i>→</i>
@@ -193,6 +242,54 @@
 </footer>
 
 <script>
+  // Returning visitor: the dashboard records which site this browser last opened, so we can
+  // offer a way straight back in. Nothing here reveals sites to anyone else — it is this
+  // browser's own storage, and the token still has to satisfy the server.
+  (function () {
+    var site = null, title = null;
+    try { site = localStorage.getItem("ms-site"); title = localStorage.getItem("ms-site-title"); }
+    catch (e) { /* private mode */ }
+    var link = document.getElementById("open-dash");
+    if (site) {
+      link.href = "/s/" + encodeURIComponent(site) + "/";
+      document.getElementById("open-dash-site").textContent = title || site;
+      link.hidden = false;
+    }
+
+    var form = document.getElementById("signin");
+    var input = document.getElementById("site-input");
+    var hint = document.getElementById("signin-hint");
+    document.getElementById("signin-toggle").addEventListener("click", function () {
+      form.classList.add("open");
+      input.focus();
+    });
+    if (!site) form.classList.add("open");   // nothing remembered: show the way in immediately
+
+    // Accept either a full access link or a bare site name.
+    function destination(raw) {
+      var v = (raw || "").trim();
+      if (!v) return null;
+      var m = v.match(/\/s\/([a-z0-9-]+)\/?(?:\?(.*))?$/i);
+      if (m) {
+        var tok = (m[2] || "").match(/(?:^|&)token=([^&]+)/);
+        return "/s/" + m[1].toLowerCase() + "/" + (tok ? "?token=" + tok[1] : "");
+      }
+      if (/^[a-z0-9-]+$/i.test(v)) return "/s/" + v.toLowerCase() + "/";
+      return null;
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var to = destination(input.value);
+      if (!to) {
+        hint.textContent = "That doesn't look like an access link or a site name.";
+        hint.className = "hint err";
+        return;
+      }
+      window.location.href = to;
+    });
+  })();
+
   // Public health check only — no site data is reachable from this page.
   fetch("/api/health", { cache: "no-store" })
     .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
